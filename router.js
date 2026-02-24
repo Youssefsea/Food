@@ -5,7 +5,6 @@ const router=express.Router();
 const auth=require('./Customers/authForCustomers');
 const middelware = require('./middelware/vaildJwt');
 const authForRestaurants=require('./restaurantServes/authForRestaurant');
-const preSignupAuth = require('./auth/preSignupAuth');
 const dishes=require('./restaurantServes/Dishes');
 const orders=require('./Customers/orders');
 const payments=require('./Customers/payments');
@@ -14,13 +13,10 @@ const chat=require('./chat/chatRoutes');
 
 router.post('/LogforAdmin', auth.loginForAdmin);
 
-router.post('/send-otp', preSignupAuth.sendOtp);
-router.post('/verify-otp', preSignupAuth.verifyOtp);
-router.post('/resend-otp', preSignupAuth.resendOtp);
+router.post('/send-otp', auth.sendOTPEmail);
 
+router.post('/signup', auth.signupForCustomer);
 router.post('/customer/signup', auth.signupForCustomer);
-router.post('/customer/resend-otp', auth.resendCustomerOtp);
-router.post('/customer/verify-account', auth.verifyCustomerAccount);
 router.post('/customer/login', auth.loginForCustomer);
 router.get('/customer/profile', middelware.sureToken,middelware.verifyRoleForCustomer, auth.getProfile);
 router.put('/customer/change-info', middelware.sureToken,middelware.verifyRoleForCustomer, auth.changeUserInfoForCustomer);
@@ -37,7 +33,6 @@ router.post('/customer/upload-payment-proof', middelware.sureToken, middelware.v
 router.post('/customer/payment-status', middelware.sureToken, middelware.verifyRoleForCustomer, payments.getPaymentStatus);
 
 router.post('/restaurant/signup', authForRestaurants.AddInfoRestaurant);
-router.post('/restaurant/verify-account', authForRestaurants.verifyRestaurantAccount);
 router.post('/restaurant/login', authForRestaurants.loginForRestaurant);
 router.post('/restaurant/add-dish', middelware.sureToken,middelware.verifyRoleForRestaurant, upload.array('images', 5), dishes.addDishesForRestaurant);
 router.get('/restaurant/profile', middelware.sureToken,middelware.verifyRoleForRestaurant, authForRestaurants.restaurantProfile);

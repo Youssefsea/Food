@@ -1,77 +1,54 @@
 const data=require("../data/data");
 const bcryptJs=require("bcryptjs");
-const axios=require("axios");
-const crypto = require("crypto");
 const {createToken}=require("../middelware/jwtmake");
-const { Readable } = require('stream');
-const cloudinary = require('../data/cloudTheImg');
-const { sendMail } = require("../data/mailService");
-const { verificationEmailTemplate } = require("../data/emailTemplates");
-const { saveOtp, getOtp, deleteOtp } = require("../data/otpStore");
-
-const VERIFICATION_EXPIRY_MINUTES = Number(process.env.VERIFICATION_EXPIRY_MINUTES || 15);
-const VERIFICATION_TTL_MS = VERIFICATION_EXPIRY_MINUTES * 60 * 1000;
-const generateVerificationCode = () => String(crypto.randomInt(100000, 1000000));
-
 
 const AddInfoRestaurant=async(req,res)=>
 {
-  return res.status(400).json({
-    error: 'Direct restaurant signup is disabled. Use /send-otp then /verify-otp to create account.',
-  });
-};
+try
+{
 
-
-
-
-const verifyRestaurantAccount = async (req, res) => {
-try {
-const { email, code } = req.body;
-
-if (!email || !code) {
-  return res.status(400).json({ error: "Email and verification code are required" });
+const {name,email,password,phone,description,location,allowed_radius_km,open_time,close_time,area_name,can_deliver,can_reserve,delivery_area}=req.body;
+const [existingRows]=await data.query("SELECT * FROM users WHERE email=?  or phone=?", [email,phone]);
+if(existingRows.length>0)
+{
+    return res.status(400).json({error:"User with this email or phone already exists"});
 }
+const role='restaurant';
+const hashPassword=await bcryptJs.hash(password,11);
+await data.query("INSERT INTO users (name,email,password,role,phone) VALUES (?,?,?,?,?)",[name,email,hashPassword,role,phone]);
 
-const [rows] = await data.query(
-  `SELECT id, is_active
-   FROM users
-   WHERE email = ? AND role = 'restaurant'`,
-  [email]
-);
+const userId= await data.query("SELECT id FROM users WHERE email=?", [email]);
+await data.query("INSERT INTO restaurant_profiles (user_id,description,location,allowed_radius_km,open_time,close_time) VALUES (?,?,?,?,?,?)",[userId[0][0].id,description,location,allowed_radius_km,open_time,close_time]);
 
-if (rows.length === 0) {
-  return res.status(404).json({ error: "Account not found" });
-}
+const restaurantProfileId= await data.query("SELECT id FROM restaurant_profiles WHERE user_id=?", [userId[0][0].id]);
 
-const user = rows[0];
-
-if (user.is_active) {
-  return res.status(200).json({ message: "Account already verified" });
-}
-
-const otpEntry = getOtp({ email, accountType: 'restaurant' });
-if (!otpEntry) {
-  return res.status(400).json({ error: "Verification code has expired or not found" });
-}
-
-if (otpEntry.code !== String(code)) {
-  return res.status(400).json({ error: "Invalid verification code" });
-}
+const polygonString = `POLYGON((${delivery_area
+  .map(coord => `${coord[0]} ${coord[1]}`)
+  .join(", ")}))`;
 
 await data.query(
-  `UPDATE users
-   SET is_active = 1
-   WHERE id = ?`,
-  [user.id]
+  `INSERT INTO restaurant_delivery_areas
+   (restaurant_id, area_name, can_deliver, can_reserve, delivery_area)
+   VALUES (?, ?, ?, ?, ST_GeomFromText(?, 4326))`,
+  [
+    restaurantProfileId[0][0].id,
+    area_name,
+    can_deliver,
+    can_reserve,
+    polygonString
+  ]
 );
 
-deleteOtp({ email, accountType: 'restaurant' });
+return res.status(201).json({message:"Restaurant registered successfully"});
 
-return res.status(200).json({ message: "Account verified successfully" });
-} catch (err) {
-  console.error("Error:", err);
-  return res.status(500).json({ error: "Internal server error" });
 }
+catch(err)
+{
+    console.error("Error:",err);
+    return res.status(500).json({error:"Internal server error"});
+
+}
+
 };
 
 const loginForRestaurant=async(req,res)=>
@@ -79,7 +56,6 @@ const loginForRestaurant=async(req,res)=>
 try
 {
 const {email,password}=req.body;
-
 
 const [userRows]=await data.query("SELECT * FROM users WHERE email=?", [email]);
 if(userRows.length===0)
@@ -90,9 +66,6 @@ const restaurant=userRows[0];
 if(restaurant.role!=='restaurant')
 {
     return res.status(403).json({error:"Access denied. Not a restaurant account."});
-}
-if (!restaurant.is_active) {
-    return res.status(403).json({ error: "Account is not verified", requiresVerification: true });
 }
 const isPasswordValid=await bcryptJs.compare(password,restaurant.password);
 if(!isPasswordValid)
@@ -128,22 +101,16 @@ catch(err)
 }
 };
 
-
-
 const restaurantProfile=async(req,res)=>
-    {
+{
 try
 {
-
-
 const restaurantId=req.user.restaurantProfileId;
-
 const [restaurantRows]=await data.query("SELECT * FROM restaurant_profiles WHERE id=?", [restaurantId]);
 if(restaurantRows.length===0)
 {
     return res.status(400).json({error:"Restaurant profile not found"});
 }
-
 
 const restaurantProfile=restaurantRows[0];
 const dishesRows=await data.query("SELECT * FROM dishes WHERE restaurant_id=?", [restaurantId]);
@@ -154,9 +121,6 @@ restaurantProfile.name=resMoreInfo[0][0].name;
 restaurantProfile.email=resMoreInfo[0][0].email;
 restaurantProfile.phone=resMoreInfo[0][0].phone;
 restaurantProfile.delivery_fees=resMoreInfo[0][0].delivery_fees;
-console.log("Restaurant More Info:", restaurantProfile);
-
- 
 
 return res.status(200).json({"restaurantProfile":{
     name:restaurantProfile.name,email:restaurantProfile.email,phone:restaurantProfile.phone,description:restaurantProfile.description,location:restaurantProfile.location,allowed_radius_km:restaurantProfile.allowed_radius_km,open_time:restaurantProfile.open_time,close_time:restaurantProfile.close_time,delivery_fees:restaurantProfile.delivery_fees},"dishes":dishesRows[0]});
@@ -168,8 +132,7 @@ catch(err)
     return res.status(500).json({error:"Internal server error"});
 }
 
-    }
-
+}
 
 const changeResturantinfo=async(req,res)=>
 {
@@ -185,14 +148,12 @@ try
         return res.status(400).json({error:"Another user with this email or phone already exists"});
     }
 
-
     await connection.query("UPDATE restaurant_profiles SET description=?, location=?, allowed_radius_km=?, open_time=?, close_time=? , delivery_fees=? WHERE id=?", [description,location,allowed_radius_km,open_time,close_time,delivery_fees,restaurantId]);
     await connection.query("UPDATE users SET name=?, email=?, phone=? WHERE id=(SELECT user_id FROM restaurant_profiles WHERE id=?)", [name,email,phone,restaurantId]);
 
     await connection.commit();
 
     return res.status(200).json({message:"Restaurant information updated successfully"});
-
 
 }
 catch(err)
@@ -201,7 +162,6 @@ catch(err)
     await connection.rollback();
     return res.status(500).json({error:"Internal server error"});   
 }};
-
 
 const updateRestaurantLocation = async (req, res) => {
   const connection = await data.getConnection();
@@ -217,21 +177,15 @@ const updateRestaurantLocation = async (req, res) => {
       can_reserve ,
       location
     } = req.body;
-    console.log("Area Name:", area_name);
-    
     
     await connection.query(
       "UPDATE restaurant_profiles SET location = ?, allowed_radius_km = ? WHERE id = ?",
       [location, allowed_radius_km, restaurantId]
     );
     
-    // تحويل delivery_area إلى polygon string
     const polygonString = `POLYGON((${delivery_area
       .map(coord => `${coord[0]} ${coord[1]}`)
       .join(", ")}))`;
-    
-    console.log("📍 Updating polygon:", polygonString);
-    console.log("📍 Restaurant ID:", restaurantId);
     
     await connection.query(
       "DELETE FROM restaurant_delivery_areas WHERE restaurant_id = ?",
@@ -307,7 +261,6 @@ catch(err)
 
 }
 
-
 const restaurantProfileStatus=async(req,res)=>
 {
 try
@@ -329,9 +282,6 @@ catch(err)
 
 };}
 
-
-
-
 const openOrCloseRestaurant=async(req,res)=>
 {
 try{
@@ -345,7 +295,6 @@ if(statuOfRes.length===0)
 }
 const statu=statuOfRes[0][0].is_open;
 let  newStatu=statu;
-console.log("Current status:", statu);
 if(statu==1)
 {
     newStatu=0;
@@ -360,17 +309,13 @@ return res.status(200).json({message:"Restaurant status updated successfully", i
 catch(err)
 {
     console.error("Error:",err);
-    return res.status(500).json({error:"Internal server error"});   
-
-
+    return res.status(500).json({error:"Internal server error"});
 }
 }
 
 const getDashboardStats = async (req, res) => {
     try {
         const restaurantId = req.user.restaurantProfileId;
-
-        // Get restaurant basic info
         const [restaurantInfo] = await data.query(
             `SELECT rp.*, u.name, u.email, u.phone 
              FROM restaurant_profiles rp
@@ -383,85 +328,20 @@ const getDashboardStats = async (req, res) => {
             return res.status(404).json({ error: "Restaurant not found" });
         }
 
-        // Get total dishes count
-        const [dishesCount] = await data.query(
-            "SELECT COUNT(*) as total_dishes FROM dishes WHERE restaurant_id = ?",
-            [restaurantId]
-        );
-
-        // Get available dishes count
-        const [availableDishes] = await data.query(
-            "SELECT COUNT(*) as available_dishes FROM dishes WHERE restaurant_id = ? AND is_available = 1",
-            [restaurantId]
-        );
-
-        // Get today's orders
-        const [todayOrders] = await data.query(
-            `SELECT COUNT(*) as today_orders, 
-                    COALESCE(SUM(total_amount), 0) as today_revenue
-             FROM orders 
-             WHERE restaurant_id = ? AND DATE(created_at) = CURDATE()`,
-            [restaurantId]
-        );
-
-        // Get pending orders count
-        const [pendingOrders] = await data.query(
-            "SELECT COUNT(*) as pending_orders FROM orders WHERE restaurant_id = ? AND status = 'pending'",
-            [restaurantId]
-        );
-
-        // Get total orders
-        const [totalOrders] = await data.query(
-            `SELECT COUNT(*) as total_orders, 
-                    COALESCE(SUM(total_amount), 0) as total_revenue
-             FROM orders 
-             WHERE restaurant_id = ?`,
-            [restaurantId]
-        );
-
-        // Get recent orders
-        const [recentOrders] = await data.query(
-            `SELECT o.id, o.total_amount, o.status, o.created_at, 
-                    u.name as customer_name, u.phone as customer_phone
-             FROM orders o
-             JOIN users u ON o.user_id = u.id
-             WHERE o.restaurant_id = ?
-             ORDER BY o.created_at DESC
-             LIMIT 10`,
-            [restaurantId]
-        );
-
-        // Get top selling dishes
-        const [topDishes] = await data.query(
-            `SELECT d.id, d.name, d.price, d.image,
-                    COUNT(oi.id) as order_count,
-                    SUM(oi.quantity) as total_quantity,
-                    SUM(oi.quantity * oi.price) as total_revenue
-             FROM dishes d
-             LEFT JOIN order_items oi ON d.id = oi.dish_id
-             WHERE d.restaurant_id = ?
-             GROUP BY d.id
-             ORDER BY total_quantity DESC
-             LIMIT 5`,
-            [restaurantId]
-        );
+        const [dishesCount] = await data.query("SELECT COUNT(*) as total_dishes FROM dishes WHERE restaurant_id = ?", [restaurantId]);
+        const [availableDishes] = await data.query("SELECT COUNT(*) as available_dishes FROM dishes WHERE restaurant_id = ? AND is_available = 1", [restaurantId]);
+        const [todayOrders] = await data.query(`SELECT COUNT(*) as today_orders, COALESCE(SUM(total_amount), 0) as today_revenue FROM orders WHERE restaurant_id = ? AND DATE(created_at) = CURDATE()`, [restaurantId]);
+        const [pendingOrders] = await data.query("SELECT COUNT(*) as pending_orders FROM orders WHERE restaurant_id = ? AND status = 'pending'", [restaurantId]);
+        const [totalOrders] = await data.query(`SELECT COUNT(*) as total_orders, COALESCE(SUM(total_amount), 0) as total_revenue FROM orders WHERE restaurant_id = ?`, [restaurantId]);
+        const [recentOrders] = await data.query(`SELECT o.id, o.total_amount, o.status, o.created_at, u.name as customer_name, u.phone as customer_phone FROM orders o JOIN users u ON o.user_id = u.id WHERE o.restaurant_id = ? ORDER BY o.created_at DESC LIMIT 10`, [restaurantId]);
+        const [topDishes] = await data.query(`SELECT d.id, d.name, d.price, d.image, COUNT(oi.id) as order_count, SUM(oi.quantity) as total_quantity, SUM(oi.quantity * oi.price) as total_revenue FROM dishes d LEFT JOIN order_items oi ON d.id = oi.dish_id WHERE d.restaurant_id = ? GROUP BY d.id ORDER BY total_quantity DESC LIMIT 5`, [restaurantId]);
 
         return res.status(200).json({
             restaurant: restaurantInfo[0],
             stats: {
-                dishes: {
-                    total: dishesCount[0].total_dishes,
-                    available: availableDishes[0].available_dishes
-                },
-                orders: {
-                    today: todayOrders[0].today_orders,
-                    pending: pendingOrders[0].pending_orders,
-                    total: totalOrders[0].total_orders
-                },
-                revenue: {
-                    today: parseFloat(todayOrders[0].today_revenue),
-                    total: parseFloat(totalOrders[0].total_revenue)
-                }
+                dishes: { total: dishesCount[0].total_dishes, available: availableDishes[0].available_dishes },
+                orders: { today: todayOrders[0].today_orders, pending: pendingOrders[0].pending_orders, total: totalOrders[0].total_orders },
+                revenue: { today: parseFloat(todayOrders[0].today_revenue), total: parseFloat(totalOrders[0].total_revenue) }
             },
             recentOrders,
             topDishes
@@ -501,7 +381,6 @@ const getRestaurantOrders = async (req, res) => {
 
         const [orders] = await data.query(query, params);
 
-        // Get order items for each order
         for (let order of orders) {
             const [items] = await data.query(
                 `SELECT oi.*, d.name as dish_name, d.image as dish_image
@@ -532,20 +411,13 @@ const updateOrderStatus = async (req, res) => {
             return res.status(400).json({ error: "Invalid status" });
         }
 
-        // Verify order belongs to this restaurant
-        const [orderCheck] = await data.query(
-            "SELECT id FROM orders WHERE id = ? AND restaurant_id = ?",
-            [orderId, restaurantId]
-        );
+        const [orderCheck] = await data.query("SELECT id FROM orders WHERE id = ? AND restaurant_id = ?", [orderId, restaurantId]);
 
         if (orderCheck.length === 0) {
             return res.status(404).json({ error: "Order not found" });
         }
 
-        await data.query(
-            "UPDATE orders SET status = ? WHERE id = ?",
-            [status, orderId]
-        );
+        await data.query("UPDATE orders SET status = ? WHERE id = ?", [status, orderId]);
 
         return res.status(200).json({ message: "Order status updated successfully" });
 
@@ -555,6 +427,4 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 
-
-
-module.exports={changeRestaurantPassword,AddInfoRestaurant,verifyRestaurantAccount,loginForRestaurant,restaurantProfile,changeResturantinfo,openOrCloseRestaurant,changeDeliveryFee,getDashboardStats,getRestaurantOrders,updateOrderStatus,updateRestaurantLocation,restaurantProfileStatus};
+module.exports={changeRestaurantPassword,AddInfoRestaurant,loginForRestaurant,restaurantProfile,changeResturantinfo,openOrCloseRestaurant,changeDeliveryFee,getDashboardStats,getRestaurantOrders,updateOrderStatus,updateRestaurantLocation,restaurantProfileStatus};
