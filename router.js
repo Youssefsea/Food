@@ -14,6 +14,7 @@ const chat=require('./chat/chatRoutes');
 router.post('/LogforAdmin', auth.loginForAdmin);
 
 router.post('/customer/signup', auth.signupForCustomer);
+router.post('/customer/verify-account', auth.verifyCustomerAccount);
 router.post('/customer/login', auth.loginForCustomer);
 router.get('/customer/profile', middelware.sureToken,middelware.verifyRoleForCustomer, auth.getProfile);
 router.put('/customer/change-info', middelware.sureToken,middelware.verifyRoleForCustomer, auth.changeUserInfoForCustomer);
@@ -30,6 +31,7 @@ router.post('/customer/upload-payment-proof', middelware.sureToken, middelware.v
 router.post('/customer/payment-status', middelware.sureToken, middelware.verifyRoleForCustomer, payments.getPaymentStatus);
 
 router.post('/restaurant/signup', authForRestaurants.AddInfoRestaurant);
+router.post('/restaurant/verify-account', authForRestaurants.verifyRestaurantAccount);
 router.post('/restaurant/login', authForRestaurants.loginForRestaurant);
 router.post('/restaurant/add-dish', middelware.sureToken,middelware.verifyRoleForRestaurant, upload.array('images', 5), dishes.addDishesForRestaurant);
 router.get('/restaurant/profile', middelware.sureToken,middelware.verifyRoleForRestaurant, authForRestaurants.restaurantProfile);
@@ -51,6 +53,10 @@ router.post('/restaurant/order-status', middelware.sureToken, middelware.verifyR
 router.post('/restaurant/payment-status', middelware.sureToken,middelware.verifyRoleForRestaurant, payments.getPaymentStatusForOrder);
 
 router.post('/admin/confirmPayment', middelware.sureToken,middelware.verifyRoleForAdmin, payments.confirmPayment);
+router.post('/admin/rejectPayment', middelware.sureToken,middelware.verifyRoleForAdmin, payments.rejectPayment);
+router.get('/admin/pendingPayments', middelware.sureToken,middelware.verifyRoleForAdmin, payments.getPendingPayments);
+router.get('/admin/allOrderPaymentProofs', middelware.sureToken,middelware.verifyRoleForAdmin, payments.getAllOrderPaymentProofs);
+
 router.get('/Customer/getBalanceAtWallet', middelware.sureToken,middelware.verifyRoleForCustomer, payments.getBalanceAtWallet);
 router.get('/restaurant/dishes', dishes.getAllResDishes);
 

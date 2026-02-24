@@ -1,5 +1,70 @@
 const data=require('../data/data');
 const axios = require('axios');
+const { sendMail } = require('../data/mailService');
+const { bookingCustomerTemplate, bookingRestaurantTemplate } = require('../data/emailTemplates');
+
+const sendBookingEmailsForOrder = async ({ orderId, customerId, restaurantId, reservationDate }) => {
+  try {
+    const [orderItems] = await data.query(
+      `SELECT oi.quantity, d.name AS dish_name
+       FROM order_items oi
+       JOIN dishes d ON d.id = oi.dish_id
+       WHERE oi.order_id = ?`,
+      [orderId]
+    );
+
+    const [customerRows] = await data.query(
+      'SELECT name, email FROM users WHERE id = ?',
+      [customerId]
+    );
+
+    const [restaurantRows] = await data.query(
+      `SELECT u.name, u.email
+       FROM restaurant_profiles rp
+       JOIN users u ON u.id = rp.user_id
+       WHERE rp.id = ?`,
+      [restaurantId]
+    );
+
+    if (!customerRows.length || !restaurantRows.length || !orderItems.length) {
+      return;
+    }
+
+    const customer = customerRows[0];
+    const restaurant = restaurantRows[0];
+    const dishLines = orderItems.map((i) => `- ${i.dish_name} x${i.quantity}`).join('\n');
+
+    const customerEmail = bookingCustomerTemplate({
+      customerName: customer.name,
+      dishLines,
+      reservationDate,
+    });
+
+    const restaurantEmail = bookingRestaurantTemplate({
+      restaurantName: restaurant.name,
+      customerName: customer.name,
+      dishLines,
+      reservationDate,
+    });
+
+    await Promise.all([
+      sendMail({
+        to: customer.email,
+        subject: customerEmail.subject,
+        text: customerEmail.text,
+        html: customerEmail.html,
+      }),
+      sendMail({
+        to: restaurant.email,
+        subject: restaurantEmail.subject,
+        text: restaurantEmail.text,
+        html: restaurantEmail.html,
+      }),
+    ]);
+  } catch (err) {
+    console.error('Failed to send booking emails:', err.message);
+  }
+};
 
 const latLngToAddressOSM = async (lat, lng) => {
   const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
@@ -664,6 +729,15 @@ const makeOrder = async (req, res) => {
           }
         });
 
+        if (is_reservation && reservation_date) {
+          await sendBookingEmailsForOrder({
+            orderId,
+            customerId,
+            restaurantId: Number(resId),
+            reservationDate: reservation_date,
+          });
+        }
+
       } catch (err) {
         failedOrders.push({
           restaurantId: resId,
@@ -735,7 +809,7 @@ const getOrdersForCustomer = async (req, res) => {
       INNER JOIN users u ON rp.user_id = u.id
       INNER JOIN order_items ol ON o.id = ol.order_id
       INNER JOIN dishes d ON d.id = ol.dish_id
-      INNER JOIN payments p ON p.order_id = o.id
+      LEFT JOIN payments p ON p.order_id = o.id
       WHERE o.user_id = ?
       ORDER BY o.created_at DESC
       `,

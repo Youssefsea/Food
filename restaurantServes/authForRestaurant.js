@@ -1,9 +1,15 @@
 const data=require("../data/data");
 const bcryptJs=require("bcryptjs");
 const axios=require("axios");
+const crypto = require("crypto");
 const {createToken}=require("../middelware/jwtmake");
 const { Readable } = require('stream');
 const cloudinary = require('../data/cloudTheImg');
+const { sendMail } = require("../data/mailService");
+const { verificationEmailTemplate } = require("../data/emailTemplates");
+
+const VERIFICATION_EXPIRY_MINUTES = Number(process.env.VERIFICATION_EXPIRY_MINUTES || 15);
+const generateVerificationCode = () => String(crypto.randomInt(100000, 1000000));
 
 
 const AddInfoRestaurant=async(req,res)=>
@@ -19,7 +25,13 @@ if(existingRows.length>0)
 }
 const role='restaurant';
 const hashPassword=await bcryptJs.hash(password,11);
-await data.query("INSERT INTO users (name,email,password,role,phone) VALUES (?,?,?,?,?)",[name,email,hashPassword,role,phone]);
+const verificationCode = generateVerificationCode();
+
+await data.query(
+  `INSERT INTO users (name,email,password,role,phone,is_verified,verification_code,verification_expires_at)
+   VALUES (?,?,?,?,?,0,?,DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+  [name,email,hashPassword,role,phone,verificationCode,VERIFICATION_EXPIRY_MINUTES]
+);
 
 const userId= await data.query("SELECT id FROM users WHERE email=?", [email]);
 console.log(userId);
@@ -53,7 +65,20 @@ await data.query(
   ]
 );
 
-return res.status(201).json({message:"Restaurant registered successfully"});
+const verificationEmail = verificationEmailTemplate({
+  name,
+  code: verificationCode,
+  expiryMinutes: VERIFICATION_EXPIRY_MINUTES,
+});
+
+await sendMail({
+  to: email,
+  subject: verificationEmail.subject,
+  text: verificationEmail.text,
+  html: verificationEmail.html,
+});
+
+return res.status(201).json({message:"Restaurant registered successfully. Verification code sent to email.", requiresVerification: true});
 
 
 
@@ -72,6 +97,55 @@ catch(err)
 
 
 
+const verifyRestaurantAccount = async (req, res) => {
+try {
+const { email, code } = req.body;
+
+if (!email || !code) {
+  return res.status(400).json({ error: "Email and verification code are required" });
+}
+
+const [rows] = await data.query(
+  `SELECT id, is_verified, verification_code, verification_expires_at
+   FROM users
+   WHERE email = ? AND role = 'restaurant'`,
+  [email]
+);
+
+if (rows.length === 0) {
+  return res.status(404).json({ error: "Account not found" });
+}
+
+const user = rows[0];
+
+if (user.is_verified) {
+  return res.status(200).json({ message: "Account already verified" });
+}
+
+if (!user.verification_code || user.verification_code !== String(code)) {
+  return res.status(400).json({ error: "Invalid verification code" });
+}
+
+if (!user.verification_expires_at || new Date(user.verification_expires_at) < new Date()) {
+  return res.status(400).json({ error: "Verification code has expired" });
+}
+
+await data.query(
+  `UPDATE users
+   SET is_verified = 1,
+       verification_code = NULL,
+       verification_expires_at = NULL
+   WHERE id = ?`,
+  [user.id]
+);
+
+return res.status(200).json({ message: "Account verified successfully" });
+} catch (err) {
+  console.error("Error:", err);
+  return res.status(500).json({ error: "Internal server error" });
+}
+};
+
 const loginForRestaurant=async(req,res)=>
 {
 try
@@ -88,6 +162,9 @@ const restaurant=userRows[0];
 if(restaurant.role!=='restaurant')
 {
     return res.status(403).json({error:"Access denied. Not a restaurant account."});
+}
+if (!restaurant.is_verified) {
+    return res.status(403).json({ error: "Account is not verified", requiresVerification: true });
 }
 const isPasswordValid=await bcryptJs.compare(password,restaurant.password);
 if(!isPasswordValid)
@@ -552,4 +629,4 @@ const updateOrderStatus = async (req, res) => {
 
 
 
-module.exports={changeRestaurantPassword,AddInfoRestaurant,loginForRestaurant,restaurantProfile,changeResturantinfo,openOrCloseRestaurant,changeDeliveryFee,getDashboardStats,getRestaurantOrders,updateOrderStatus,updateRestaurantLocation,restaurantProfileStatus};
+module.exports={changeRestaurantPassword,AddInfoRestaurant,verifyRestaurantAccount,loginForRestaurant,restaurantProfile,changeResturantinfo,openOrCloseRestaurant,changeDeliveryFee,getDashboardStats,getRestaurantOrders,updateOrderStatus,updateRestaurantLocation,restaurantProfileStatus};
