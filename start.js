@@ -7,7 +7,6 @@ const router = require('./router');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const { setupChatSocket } = require('./chat/chatSocket');
-const { ensureUserVerificationColumns } = require('./data/schemaInit');
 
 // إنشاء HTTP server
 const server = http.createServer(app);
@@ -38,17 +37,7 @@ app.use(express.json());
 app.use('/', router);
 
 const port = process.env.PORT || 3444;
-
-const bootstrap = async () => {
-    await ensureUserVerificationColumns();
-
-    server.listen(port, () => {
-        console.log(`Server is running at http://localhost:${port}`);
-        console.log(`Socket.IO is ready for connections`);
-    });
-};
-
-bootstrap().catch((err) => {
-    console.error('Startup failed:', err);
-    process.exit(1);
+server.listen(port, () => {
+    console.log(`Server is running at http://localhost:${port}`);
+    console.log(`Socket.IO is ready for connections`);
 });

@@ -7,8 +7,10 @@ const { Readable } = require('stream');
 const cloudinary = require('../data/cloudTheImg');
 const { sendMail } = require("../data/mailService");
 const { verificationEmailTemplate } = require("../data/emailTemplates");
+const { saveOtp, getOtp, deleteOtp } = require("../data/otpStore");
 
 const VERIFICATION_EXPIRY_MINUTES = Number(process.env.VERIFICATION_EXPIRY_MINUTES || 15);
+const VERIFICATION_TTL_MS = VERIFICATION_EXPIRY_MINUTES * 60 * 1000;
 const generateVerificationCode = () => String(crypto.randomInt(100000, 1000000));
 
 
@@ -28,10 +30,17 @@ const hashPassword=await bcryptJs.hash(password,11);
 const verificationCode = generateVerificationCode();
 
 await data.query(
-  `INSERT INTO users (name,email,password,role,phone,is_verified,verification_code,verification_expires_at)
-   VALUES (?,?,?,?,?,0,?,DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
-  [name,email,hashPassword,role,phone,verificationCode,VERIFICATION_EXPIRY_MINUTES]
+  `INSERT INTO users (name,email,password,role,phone,is_active)
+   VALUES (?,?,?,?,?,0)`,
+  [name,email,hashPassword,role,phone]
 );
+
+saveOtp({
+  email,
+  accountType: 'restaurant',
+  code: verificationCode,
+  ttlMs: VERIFICATION_TTL_MS,
+});
 
 const userId= await data.query("SELECT id FROM users WHERE email=?", [email]);
 console.log(userId);
@@ -106,7 +115,7 @@ if (!email || !code) {
 }
 
 const [rows] = await data.query(
-  `SELECT id, is_verified, verification_code, verification_expires_at
+  `SELECT id, is_active
    FROM users
    WHERE email = ? AND role = 'restaurant'`,
   [email]
@@ -118,26 +127,27 @@ if (rows.length === 0) {
 
 const user = rows[0];
 
-if (user.is_verified) {
+if (user.is_active) {
   return res.status(200).json({ message: "Account already verified" });
 }
 
-if (!user.verification_code || user.verification_code !== String(code)) {
-  return res.status(400).json({ error: "Invalid verification code" });
+const otpEntry = getOtp({ email, accountType: 'restaurant' });
+if (!otpEntry) {
+  return res.status(400).json({ error: "Verification code has expired or not found" });
 }
 
-if (!user.verification_expires_at || new Date(user.verification_expires_at) < new Date()) {
-  return res.status(400).json({ error: "Verification code has expired" });
+if (otpEntry.code !== String(code)) {
+  return res.status(400).json({ error: "Invalid verification code" });
 }
 
 await data.query(
   `UPDATE users
-   SET is_verified = 1,
-       verification_code = NULL,
-       verification_expires_at = NULL
+   SET is_active = 1
    WHERE id = ?`,
   [user.id]
 );
+
+deleteOtp({ email, accountType: 'restaurant' });
 
 return res.status(200).json({ message: "Account verified successfully" });
 } catch (err) {
@@ -163,7 +173,7 @@ if(restaurant.role!=='restaurant')
 {
     return res.status(403).json({error:"Access denied. Not a restaurant account."});
 }
-if (!restaurant.is_verified) {
+if (!restaurant.is_active) {
     return res.status(403).json({ error: "Account is not verified", requiresVerification: true });
 }
 const isPasswordValid=await bcryptJs.compare(password,restaurant.password);
