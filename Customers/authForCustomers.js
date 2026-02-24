@@ -12,66 +12,9 @@ const VERIFICATION_TTL_MS = VERIFICATION_EXPIRY_MINUTES * 60 * 1000;
 const generateVerificationCode = () => String(crypto.randomInt(100000, 1000000));
 
 const signupForCustomer = async (req, res) => {
-  try {
-    const { name, email, password, role, phone } = req.body;
-if(role==='restaurant')
-{
-
-  return res.status(400).json({ error: "Invalid role" });
-}
-
-
-if(role!=='customer' && role!=='admin')
-{
-    return res.status(400).json({ error: "Invalid role" });
-}
-
-    const [userExists] = await data.query(
-      "SELECT * FROM users WHERE email=? OR phone=?",
-      [email, phone]
-    );
-
-    if (userExists.length > 0) {
-      return res.status(400).json({ error: "User already exists" });
-    }
-
-    const hashPassword = await bcryptJs.hash(password, 11);
-    const verificationCode = generateVerificationCode();
-
-    await data.query(
-      `INSERT INTO users (name, email, password, role, phone, is_active)
-       VALUES (?, ?, ?, ?, ?, 0)`,
-      [name, email, hashPassword, role, phone]
-    );
-
-    saveOtp({
-      email,
-      accountType: 'customer',
-      code: verificationCode,
-      ttlMs: VERIFICATION_TTL_MS,
-    });
-
-    const verificationEmail = verificationEmailTemplate({
-      name,
-      code: verificationCode,
-      expiryMinutes: VERIFICATION_EXPIRY_MINUTES,
-    });
-
-    await sendMail({
-      to: email,
-      subject: verificationEmail.subject,
-      text: verificationEmail.text,
-      html: verificationEmail.html,
-    });
-
-    return res.status(201).json({
-      message: "User registered successfully. Verification code sent to email.",
-      requiresVerification: true,
-    });
-  } catch (err) {
-    console.error("Error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
+  return res.status(400).json({
+    error: 'Direct signup is disabled. Use /send-otp then /verify-otp to create account.',
+  });
 };
 
 const loginForCustomer = async (req, res) => {
@@ -187,6 +130,62 @@ catch(err)
 }
 };
 
+const resendCustomerOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const [rows] = await data.query(
+      `SELECT id, name, is_active
+       FROM users
+       WHERE email = ? AND role = 'customer'`,
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    const user = rows[0];
+
+    if (user.is_active) {
+      return res.status(400).json({ error: "Account is already verified" });
+    }
+
+    const verificationCode = generateVerificationCode();
+    saveOtp({
+      email,
+      accountType: 'customer',
+      code: verificationCode,
+      ttlMs: VERIFICATION_TTL_MS,
+    });
+
+    const verificationEmail = verificationEmailTemplate({
+      name: user.name,
+      code: verificationCode,
+      expiryMinutes: VERIFICATION_EXPIRY_MINUTES,
+    });
+
+    await sendMail({
+      to: email,
+      subject: verificationEmail.subject,
+      text: verificationEmail.text,
+      html: verificationEmail.html,
+    });
+
+    return res.status(200).json({
+      message: "Verification code resent successfully",
+      expiresInSeconds: VERIFICATION_EXPIRY_MINUTES * 60,
+    });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 const verifyCustomerAccount = async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -284,4 +283,4 @@ res.cookie('token', token, {
   }
 }
 
-module.exports = { loginForCustomer, signupForCustomer, verifyCustomerAccount, getProfile, changeUserInfoForCustomer, loginForAdmin };
+module.exports = { loginForCustomer, signupForCustomer, resendCustomerOtp, verifyCustomerAccount, getProfile, changeUserInfoForCustomer, loginForAdmin };

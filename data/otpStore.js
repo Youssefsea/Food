@@ -4,7 +4,7 @@ const CLEANUP_INTERVAL_MS = Number(process.env.OTP_CLEANUP_INTERVAL_MS || 60_000
 
 const makeKey = ({ email, accountType }) => `${String(accountType).toLowerCase()}::${String(email).toLowerCase()}`;
 
-const saveOtp = ({ email, accountType, code, ttlMs }) => {
+const saveOtp = ({ email, accountType, code, ttlMs, signupData = null, resendAvailableAt = null }) => {
   const expiresAt = Date.now() + ttlMs;
   const key = makeKey({ email, accountType });
 
@@ -13,6 +13,8 @@ const saveOtp = ({ email, accountType, code, ttlMs }) => {
     accountType: String(accountType).toLowerCase(),
     code: String(code),
     expiresAt,
+    signupData,
+    resendAvailableAt,
   });
 };
 

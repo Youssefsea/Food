@@ -5,6 +5,7 @@ const router=express.Router();
 const auth=require('./Customers/authForCustomers');
 const middelware = require('./middelware/vaildJwt');
 const authForRestaurants=require('./restaurantServes/authForRestaurant');
+const preSignupAuth = require('./auth/preSignupAuth');
 const dishes=require('./restaurantServes/Dishes');
 const orders=require('./Customers/orders');
 const payments=require('./Customers/payments');
@@ -13,7 +14,12 @@ const chat=require('./chat/chatRoutes');
 
 router.post('/LogforAdmin', auth.loginForAdmin);
 
+router.post('/send-otp', preSignupAuth.sendOtp);
+router.post('/verify-otp', preSignupAuth.verifyOtp);
+router.post('/resend-otp', preSignupAuth.resendOtp);
+
 router.post('/customer/signup', auth.signupForCustomer);
+router.post('/customer/resend-otp', auth.resendCustomerOtp);
 router.post('/customer/verify-account', auth.verifyCustomerAccount);
 router.post('/customer/login', auth.loginForCustomer);
 router.get('/customer/profile', middelware.sureToken,middelware.verifyRoleForCustomer, auth.getProfile);

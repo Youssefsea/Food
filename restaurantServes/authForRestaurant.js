@@ -16,91 +16,9 @@ const generateVerificationCode = () => String(crypto.randomInt(100000, 1000000))
 
 const AddInfoRestaurant=async(req,res)=>
 {
-try
-{
-
-const {name,email,password,phone,description,location,allowed_radius_km,open_time,close_time,area_name,can_deliver,can_reserve,delivery_area}=req.body;
-const [existingRows]=await data.query("SELECT * FROM users WHERE email=?  or phone=?", [email,phone]);
-if(existingRows.length>0)
-{
-    return res.status(400).json({error:"User with this email or phone already exists"});
-}
-const role='restaurant';
-const hashPassword=await bcryptJs.hash(password,11);
-const verificationCode = generateVerificationCode();
-
-await data.query(
-  `INSERT INTO users (name,email,password,role,phone,is_active)
-   VALUES (?,?,?,?,?,0)`,
-  [name,email,hashPassword,role,phone]
-);
-
-saveOtp({
-  email,
-  accountType: 'restaurant',
-  code: verificationCode,
-  ttlMs: VERIFICATION_TTL_MS,
-});
-
-const userId= await data.query("SELECT id FROM users WHERE email=?", [email]);
-console.log(userId);
-await data.query("INSERT INTO restaurant_profiles (user_id,description,location,allowed_radius_km,open_time,close_time) VALUES (?,?,?,?,?,?)",[userId[0][0].id,description,location,allowed_radius_km,open_time,close_time]);
-
-const restaurantProfileId= await data.query("SELECT id FROM restaurant_profiles WHERE user_id=?", [userId[0][0].id]);
-
-const polygonString = `POLYGON((${delivery_area
-  .map(coord => `${coord[0]} ${coord[1]}`)
-  .join(", ")}))`;
-
-// await data.query("INSERT INTO restaurant_delivery_areas (restaurant_id,area_name,can_deliver,can_reserve,delivery_area) VALUES (?,?,?,?,ST_GeomFromText(?))",[restaurantProfileId[0][0].id,area_name,can_deliver,can_reserve,polygonString]);
-// await data.query(
-//   `INSERT INTO restaurant_delivery_areas 
-//    (restaurant_id, area_name, can_deliver, can_reserve, delivery_area) 
-//    VALUES (?,?,?,?,ST_SRID(ST_GeomFromText(?), 4326))`,
-//   [restaurantProfileId[0][0].id, area_name, can_deliver, can_reserve, polygonString]
-// );
- console.log("📍 Polygon being saved:", polygonString);
-    console.log("📍 First 3 coords:", delivery_area.slice(0, 3));
-await data.query(
-  `INSERT INTO restaurant_delivery_areas
-   (restaurant_id, area_name, can_deliver, can_reserve, delivery_area)
-   VALUES (?, ?, ?, ?, ST_GeomFromText(?, 4326))`,
-  [
-    restaurantProfileId[0][0].id,
-    area_name,
-    can_deliver,
-    can_reserve,
-    polygonString
-  ]
-);
-
-const verificationEmail = verificationEmailTemplate({
-  name,
-  code: verificationCode,
-  expiryMinutes: VERIFICATION_EXPIRY_MINUTES,
-});
-
-await sendMail({
-  to: email,
-  subject: verificationEmail.subject,
-  text: verificationEmail.text,
-  html: verificationEmail.html,
-});
-
-return res.status(201).json({message:"Restaurant registered successfully. Verification code sent to email.", requiresVerification: true});
-
-
-
-}
-
-
-catch(err)
-{
-    console.error("Error:",err);
-    return res.status(500).json({error:"Internal server error"});
-
-}
-
+  return res.status(400).json({
+    error: 'Direct restaurant signup is disabled. Use /send-otp then /verify-otp to create account.',
+  });
 };
 
 
