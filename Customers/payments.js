@@ -333,6 +333,21 @@ const getPaymentStatusForOrder = async (req, res) =>
 }
 
 
+const getAllOrderPaymentProofs=async(req,res)=>
+{
+    try
+    {
+const paymentProofs=await data.query(`SELECT p.id as payment_id, p.amount, p.payment_method, p.payment_proof, p.created_at,u.name as customer_name, u.phone as customer_phone
+FROM payments p JOIN orders o ON p.order_id = o.id JOIN users u ON o.user_id = u.id WHERE p.payment_proof IS NOT NULL ORDER BY p.created_at DESC`); 
+return res.status(200).json({paymentProofs:paymentProofs[0]});
+
+    }catch(err)
+    {
+        console.error("Error getting payment proofs for restaurant orders:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
 const getPendingPayments = async (req, res) => {
     try {
         const [payments] = await data.query(
@@ -386,5 +401,6 @@ module.exports = {
     getPaymentStatus,
     getPendingPayments,
     getPaymentStatusForOrder,
-    getBalanceAtWallet
+    getBalanceAtWallet,
+    getAllOrderPaymentProofs
 };

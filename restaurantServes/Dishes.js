@@ -110,7 +110,7 @@ const getAllDishesForRestaurantExplore=async(req,res)=>
 
         const restaurantId=req.body.restaurantId;
 
-    const dishesRows=await data.query("SELECT * FROM dishes WHERE restaurant_id=?", [restaurantId]);
+    const dishesRows=await data.query("SELECT * FROM dishes WHERE restaurant_id=? AND is_available=1", [restaurantId]);
   
     
      return res.status(200).json({dishes:dishesRows[0]});

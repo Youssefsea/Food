@@ -29,11 +29,10 @@ async function sendEmail(to, OTP) {
 const sendOTPEmail = async (req, res) => {
   try {
     const { email, phone } = req.body;
-console.log("Received OTP request for email:", email, "and phone:", phone);
+
     if (!email || !phone) {
       return res.status(400).json({ error: "Email and phone are required" });
     }
-
 
     const [existing] = await data.query(
       "SELECT id FROM users WHERE email = ? OR phone = ?",
@@ -47,11 +46,16 @@ console.log("Received OTP request for email:", email, "and phone:", phone);
     const otp = crypto.randomInt(100000, 999999).toString();
     otpCache.set(email, otp);
 
-    await sendEmail(email, otp);
+    res.status(200).json({ message: "OTP sent to your email successfully" });
 
-    return res
-      .status(200)
-      .json({ message: "OTP sent to your email successfully" });
+    sendEmail(email, otp)
+      .then(() => {
+        console.log(`OTP ${otp} sent to email: ${email}`);
+      })
+      .catch(err => {
+        console.error("Email sending failed:", err);
+      });
+
   } catch (err) {
     console.error("Send OTP Error:", err);
     return res.status(500).json({ error: "Failed to send OTP" });
