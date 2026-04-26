@@ -52,8 +52,8 @@ io.use((socket, next) => {
                 const userRole = socket.user.role;
 
                 // التحقق من أن الغرفة موجودة
-                const [roomRows] = await data.query(
-                    'SELECT * FROM chat_rooms WHERE id = ?',
+                const { rows: roomRows } = await data.query(
+                    'SELECT * FROM chat_rooms WHERE id = $1',
                     [roomId]
                 );
 
@@ -88,11 +88,11 @@ if (userRole === 'restaurant') {
                 console.log(`User ${userId} joined room_${roomId}`);
 
                 // جلب الرسائل السابقة
-                const [messages] = await data.query(
+                const { rows: messages } = await data.query(
                     `SELECT cm.*, u.name as sender_name 
                      FROM chat_messages cm 
                      LEFT JOIN users u ON cm.sender_id = u.id 
-                     WHERE cm.room_id = ? 
+                     WHERE cm.room_id = $1 
                      ORDER BY cm.created_at ASC`,
                     [roomId]
                 );
@@ -130,8 +130,8 @@ if (userRole === 'restaurant') {
                 }
 
                 // التحقق من أن الغرفة موجودة و المستخدم له صلاحية
-                const [roomRows] = await data.query(
-                    'SELECT * FROM chat_rooms WHERE id = ?',
+                const { rows: roomRows } = await data.query(
+                    'SELECT * FROM chat_rooms WHERE id = $1',
                     [roomId]
                 );
 
@@ -162,8 +162,8 @@ if (userRole === 'restaurant') {
     }
     // أو إذا كان room.restaurant_id = restaurant_profiles.id
     else {
-        const [restaurantProfile] = await data.query(
-            'SELECT id FROM restaurant_profiles WHERE user_id = ?',
+        const { rows: restaurantProfile } = await data.query(
+            'SELECT id FROM restaurant_profiles WHERE user_id = $1',
             [senderId]
         );
         if (restaurantProfile.length > 0 && Number(restaurantProfile[0].id) === Number(room.restaurant_id)) {
@@ -180,13 +180,13 @@ if (userRole === 'restaurant') {
                 }
 
                 // حفظ الرسالة في الداتا بيز
-                const [result] = await data.query(
-                    'INSERT INTO chat_messages (room_id, sender_id, message) VALUES (?, ?, ?)',
+                const result = await data.query(
+                    'INSERT INTO chat_messages (room_id, sender_id, message) VALUES ($1, $2, $3) RETURNING id',
                     [roomId, senderId, message.trim()]
                 );
 
                 const newMessage = {
-                    id: result.insertId,
+                    id: result.rows[0].id,
                     room_id: roomId,
                     sender_id: senderId,
                     sender_name: socket.user.name,

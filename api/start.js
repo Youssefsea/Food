@@ -3,10 +3,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const app = express();
-const router = require('./router');
+const router = require('../router');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const { setupChatSocket } = require('./chat/chatSocket');
+const { setupChatSocket } = require('../chat/chatSocket');
 
 const server = http.createServer(app);
 

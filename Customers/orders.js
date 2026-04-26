@@ -5,24 +5,24 @@ const { bookingCustomerTemplate, bookingRestaurantTemplate } = require('../data/
 
 const sendBookingEmailsForOrder = async ({ orderId, customerId, restaurantId, reservationDate }) => {
   try {
-    const [orderItems] = await data.query(
+    const { rows: orderItems } = await data.query(
       `SELECT oi.quantity, d.name AS dish_name
        FROM order_items oi
        JOIN dishes d ON d.id = oi.dish_id
-       WHERE oi.order_id = ?`,
+       WHERE oi.order_id = $1`,
       [orderId]
     );
 
-    const [customerRows] = await data.query(
-      'SELECT name, email FROM users WHERE id = ?',
+    const { rows: customerRows } = await data.query(
+      'SELECT name, email FROM users WHERE id = $1',
       [customerId]
     );
 
-    const [restaurantRows] = await data.query(
+    const { rows: restaurantRows } = await data.query(
       `SELECT u.name, u.email
        FROM restaurant_profiles rp
        JOIN users u ON u.id = rp.user_id
-       WHERE rp.id = ?`,
+       WHERE rp.id = $1`,
       [restaurantId]
     );
 
@@ -71,9 +71,9 @@ const latLngToAddressOSM = async (lat, lng) => {
 
   try {
     const response = await axios.get(url, {
-      headers: { "User-Agent": "NodeJS-App" } // مهم لنظام Nominatim
+      headers: { "User-Agent": "NodeJS-App" }
     });
-    return response.data.display_name; // العنوان الكامل
+    return response.data.display_name;
   } catch (error) {
     console.error(error);
     return "Error fetching address";
@@ -90,18 +90,15 @@ const lookForNearRestaurants = async (req, res) => {
 
 const userPoint = `POINT(${lng} ${lat})`;
 
-const [rows] = await data.query(
+const { rows } = await data.query(
   `SELECT id AS area_id, restaurant_id
    FROM restaurant_delivery_areas
    WHERE ST_Intersects(
      delivery_area,
-     ST_GeomFromText(?, 4326)
+     ST_GeomFromText($1, 4326)
    )`,
   [userPoint]
 );
-
-
-  
 
     if (rows.length === 0) {
       return res.status(400).json({ message: "No nearby restaurants found" });
@@ -112,18 +109,18 @@ if (!restaurantIds.length) {
   return res.status(400).json({ error: "No nearby restaurants found" });
 }
 
-    const [restaurants] = await data.query(
+    const restaurantPlaceholders = restaurantIds.map((_, i) => `$${i + 1}`).join(',');
+    const { rows: restaurants } = await data.query(
       `SELECT id, description, location
        FROM restaurant_profiles
-       WHERE id IN (${restaurantIds.map(() => '?').join(',')})`,
+       WHERE id IN (${restaurantPlaceholders})`,
       restaurantIds
     );
-    
 
     const result = rows.map(area => {
       const info = restaurants.find(r => r.id === area.restaurant_id);
       return {
-           id: area.restaurant_id, 
+           id: area.restaurant_id,
         area_id: area.area_id,
         restaurant_id: area.restaurant_id,
         description: info?.description,
@@ -153,12 +150,12 @@ const lookForResByName=async(req,res)=>
         return res.status(400).json({error:"Name query parameter is required"});
     }
 
-    const [restaurants] = await data.query(
+    const { rows: restaurants } = await data.query(
       `SELECT u.id as user_id,u.phone as phone, u.name AS restaurant_name,rp.id as id, rp.description, rp.location, rp.delivery_fees, rp.is_open, rda.can_deliver, rda.can_reserve
        FROM users u
        INNER JOIN restaurant_profiles rp ON u.id = rp.user_id
        INNER JOIN restaurant_delivery_areas rda ON rp.id = rda.restaurant_id
-       WHERE u.name LIKE ?`,
+       WHERE u.name LIKE $1`,
       [`%${name}%`]
     );
 
@@ -182,13 +179,13 @@ const lookforAllRestaurants=async(req,res)=>
 {
 try
 {
-// const [restaurants]=await data.query("SELECT id,description,location,can_reserve,can_deliver FROM restaurant_profiles inner join restaurant_delivery_areas ON restaurant_profiles.id = restaurant_delivery_areas.restaurant_id WHERE is_open=1");
+// const { rows: restaurants }=await data.query("SELECT id,description,location,can_reserve,can_deliver FROM restaurant_profiles inner join restaurant_delivery_areas ON restaurant_profiles.id = restaurant_delivery_areas.restaurant_id WHERE is_open = true");
 
-const [restaurants] = await data.query(`
+const { rows: restaurants } = await data.query(`
  SELECT DISTINCT
   rp.id,
   rp.user_id,
-  u.name AS restaurant_name,   
+  u.name AS restaurant_name,
   rp.description,
   rp.location,
   rp.delivery_fees,
@@ -199,7 +196,7 @@ INNER JOIN restaurant_delivery_areas rda
   ON rp.id = rda.restaurant_id
 INNER JOIN users u
   ON rp.user_id = u.id
-WHERE rp.is_open = 1
+WHERE rp.is_open = true
 
 `);
 
@@ -224,7 +221,7 @@ const restaurantsWhoCanResiveOrder=async(req,res)=>
 try
 {
 
-const [restaurantIds]=await data.query('SELECT restaurant_id FROM restaurant_delivery_areas WHERE can_reserve=1');
+const { rows: restaurantIds }=await data.query('SELECT restaurant_id FROM restaurant_delivery_areas WHERE can_reserve = true');
 
 
 
@@ -235,8 +232,8 @@ if (!ids.length) {
   return res.status(400).json({ error: "No restaurants found in cart" });
 }
 
-
-const [restaurants]=await data.query(`SELECT  description, location FROM restaurant_profiles WHERE id IN (${ids.map(()=>'?').join(',')})`, ids);
+const idPlaceholders = ids.map((_, i) => `$${i + 1}`).join(',');
+const { rows: restaurants }=await data.query(`SELECT description, location FROM restaurant_profiles WHERE id IN (${idPlaceholders})`, ids);
 
 return res.status(200).json({ restaurants });
 }
@@ -261,33 +258,33 @@ try{
 const customerId=req.user.id;
 const {dishId,quantity}=req.body;
 
-const chekDishavailability=await data.query("SELECT is_available FROM dishes WHERE id=?", [dishId]);
-if(chekDishavailability[0].length===0)
+const { rows: dishAvailability }=await data.query("SELECT is_available FROM dishes WHERE id = $1", [dishId]);
+if(dishAvailability.length===0)
 {
     return res.status(400).json({error:"Dish not found"});
 }
-if(!chekDishavailability[0][0].is_available)
+if(!dishAvailability[0].is_available)
 {
     return res.status(400).json({error:"Dish is not available"});
 }
 
-const [exitCart]=await data.query("SELECT id FROM carts WHERE user_id=?", [customerId]);
+const { rows: exitCart }=await data.query("SELECT id FROM carts WHERE user_id = $1", [customerId]);
 if(exitCart.length===0)
 {
-    const [newCart]=await data.query("INSERT INTO carts (user_id) VALUES (?)",[customerId]);
-    const cartId=newCart.insertId;
-    await data.query("INSERT INTO cart_items (cart_id,dish_id,quantity) VALUES (?,?,?)",[cartId,dishId,quantity]);
+    const newCart=await data.query("INSERT INTO carts (user_id) VALUES ($1) RETURNING id",[customerId]);
+    const cartId=newCart.rows[0].id;
+    await data.query("INSERT INTO cart_items (cart_id, dish_id, quantity) VALUES ($1, $2, $3)",[cartId,dishId,quantity]);
     console.log("New cart created with ID:", cartId);
     return res.status(201).json({message:"Dish added to cart successfully"});
 }
 
 else if(exitCart.length>0)
 {
-    await data.query('UPDATE carts SET updated_at= CURRENT_TIMESTAMP WHERE id=?',[exitCart[0].id]);
-    const [exitItem]=await data.query("SELECT id,quantity FROM cart_items WHERE cart_id=? AND dish_id=?", [exitCart[0].id,dishId]);
+    await data.query('UPDATE carts SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',[exitCart[0].id]);
+    const { rows: exitItem }=await data.query("SELECT id, quantity FROM cart_items WHERE cart_id = $1 AND dish_id = $2", [exitCart[0].id,dishId]);
 if(exitItem.length===0)
 {
-    await data.query("INSERT INTO cart_items (cart_id,dish_id,quantity) VALUES (?,?,?)",[exitCart[0].id,dishId,quantity]);
+    await data.query("INSERT INTO cart_items (cart_id, dish_id, quantity) VALUES ($1, $2, $3)",[exitCart[0].id,dishId,quantity]);
     return res.status(201).json({message:"Dish added to cart successfully"});
 
 }
@@ -295,7 +292,7 @@ if(exitItem.length===0)
 else if(exitItem.length>0)
 {
     const newQuantity=exitItem[0].quantity+quantity;
-    await data.query("UPDATE cart_items SET quantity=? WHERE id=?", [newQuantity,exitItem[0].id]);
+    await data.query("UPDATE cart_items SET quantity = $1 WHERE id = $2", [newQuantity,exitItem[0].id]);
     return res.status(200).json({message:"Dish quantity updated in cart successfully"});
 }
 
@@ -317,19 +314,19 @@ try
 {
     const customerId=req.user.id;
     const {dishId,quantity}=req.body;
-    const [exitCart]=await data.query("SELECT id FROM carts WHERE user_id=?", [customerId]);
+    const { rows: exitCart }=await data.query("SELECT id FROM carts WHERE user_id = $1", [customerId]);
     if(exitCart.length===0)
     {
         return res.status(400).json({error:"Cart not found"});
     }
 
-    const [exitItem]=await data.query("SELECT id FROM cart_items WHERE cart_id=? AND dish_id=?", [exitCart[0].id,dishId]);
+    const { rows: exitItem }=await data.query("SELECT id FROM cart_items WHERE cart_id = $1 AND dish_id = $2", [exitCart[0].id,dishId]);
     if(exitItem.length===0)
     {
         return res.status(400).json({error:"Dish not found in cart"});
     }
 
-    await data.query("UPDATE cart_items SET quantity=? WHERE id=?", [quantity, exitItem[0].id]);
+    await data.query("UPDATE cart_items SET quantity = $1 WHERE id = $2", [quantity, exitItem[0].id]);
     return res.status(200).json({message:"Dish quantity updated in cart successfully"});
 
 }
@@ -349,19 +346,19 @@ try
     const customerId=req.user.id;
     const {dishId}=req.body;
 
-    const [exitCart]=await data.query("SELECT id FROM carts WHERE user_id=?", [customerId]);
+    const { rows: exitCart }=await data.query("SELECT id FROM carts WHERE user_id = $1", [customerId]);
     if(exitCart.length===0)
     {
         return res.status(400).json({error:"Cart not found"});
     }
 
-    const [exitItem]=await data.query("SELECT id FROM cart_items WHERE cart_id=? AND dish_id=?", [exitCart[0].id,dishId]);
+    const { rows: exitItem }=await data.query("SELECT id FROM cart_items WHERE cart_id = $1 AND dish_id = $2", [exitCart[0].id,dishId]);
     if(exitItem.length===0)
     {
         return res.status(400).json({error:"Dish not found in cart"});
     }
 
-    await data.query("DELETE FROM cart_items WHERE id=?", [exitItem[0].id]);
+    await data.query("DELETE FROM cart_items WHERE id = $1", [exitItem[0].id]);
     return res.status(200).json({message:"Dish removed from cart successfully"});
 
 }catch(err)
@@ -380,8 +377,8 @@ const getCartDetails = async (req, res) => {
   try {
     const customerId = req.user.id;
 
-    const [existCart] = await data.query(
-      "SELECT id FROM carts WHERE user_id = ?",
+    const { rows: existCart } = await data.query(
+      "SELECT id FROM carts WHERE user_id = $1",
       [customerId]
     );
 
@@ -391,12 +388,12 @@ const getCartDetails = async (req, res) => {
 
     const cartId = existCart[0].id;
     console.log("Cart ID:", cartId);
-    const [cartItems] = await data.query(
-      "SELECT dish_id, quantity FROM cart_items WHERE cart_id = ?",
+    const { rows: cartItems } = await data.query(
+      "SELECT dish_id, quantity FROM cart_items WHERE cart_id = $1",
       [cartId]
     );
     console.log("Cart Items:", cartItems);
-  
+
     if (cartItems.length === 0) {
       console.log("Cart is empty");
       return res.status(200).json({
@@ -413,19 +410,19 @@ const getCartDetails = async (req, res) => {
     const dishIds = cartItems.map(i => Number(i.dish_id));
     console.log("Dish IDs in cart:", dishIds);
 
-    const placeholders = dishIds.map(() => "?").join(",");
+    const placeholders = dishIds.map((_, i) => `$${i + 1}`).join(",");
 
-    const [dishes] = await data.query('Select d.id,d.image,d.name,d.description,d.price,d.restaurant_id,rp.location as location,rp.delivery_fees,rda.can_reserve,rda.can_deliver, rp.user_id as restaurant_user_id, u.name as restaurant_name from dishes d inner join restaurant_delivery_areas as rda on d.restaurant_id = rda.restaurant_id inner join restaurant_profiles rp on d.restaurant_id = rp.id inner join users u on rp.user_id = u.id where d.id IN (' + placeholders + ')', dishIds);
-     
+    const { rows: dishes } = await data.query(
+      'SELECT d.id,d.image,d.name,d.description,d.price,d.restaurant_id,rp.location as location,rp.delivery_fees,rda.can_reserve,rda.can_deliver, rp.user_id as restaurant_user_id, u.name as restaurant_name from dishes d inner join restaurant_delivery_areas as rda on d.restaurant_id = rda.restaurant_id inner join restaurant_profiles rp on d.restaurant_id = rp.id inner join users u on rp.user_id = u.id where d.id IN (' + placeholders + ')',
+      dishIds
+    );
+
     console.log("Dishes fetched:", dishes);
-
-
 
     const detailedCartItems = cartItems
       .map(item => {
         const dish = dishes.find(d => d.id === item.dish_id);
 
-        // لو الطبق اتحذف من الداتا بيز
         if (!dish) return null;
 const deliveryFee = dish.delivery_fees;
         return {
@@ -448,7 +445,7 @@ const deliveryFee = dish.delivery_fees;
       })
       .filter(Boolean);
 
-    
+
 
     const groupedByRestaurant = detailedCartItems.reduce((acc, item) => {
       let restaurant = acc.find(
@@ -488,25 +485,29 @@ const deliveryFee = dish.delivery_fees;
       return acc;
     }, []);
 
-    // أضف إحداثيات مركز المطعم لكل مطعم
     for (let i = 0; i < groupedByRestaurant.length; i++) {
       const restaurantId = groupedByRestaurant[i].restaurantId;
-      
-      const [deliveryAreas] = await data.query(
-        "SELECT delivery_area FROM restaurant_delivery_areas WHERE restaurant_id=?",
+
+      const { rows: deliveryAreas } = await data.query(
+        "SELECT ST_AsGeoJSON(delivery_area) AS area FROM restaurant_delivery_areas WHERE restaurant_id = $1",
         [restaurantId]
       );
 
       let restaurantLat = null, restaurantLng = null;
       if (deliveryAreas.length > 0) {
-        const points = deliveryAreas[0].delivery_area[0];
+        const geoJson = JSON.parse(deliveryAreas[0].area);
+        const points = geoJson.coordinates[0] || [];
         let sumLat = 0, sumLng = 0;
+
         points.forEach(p => {
-          sumLng += p.x;
-          sumLat += p.y;
+          sumLng += p[0];
+          sumLat += p[1];
         });
-        restaurantLng = sumLng / points.length;
-        restaurantLat = sumLat / points.length;
+
+        if (points.length > 0) {
+          restaurantLng = sumLng / points.length;
+          restaurantLat = sumLat / points.length;
+        }
       }
 
       groupedByRestaurant[i] = {
@@ -547,13 +548,13 @@ const countAtCart=async(req,res)=>
   {
 try{
 const customerId=req.user.id;
-const [existCart]=await data.query("SELECT id FROM carts WHERE user_id=?", [customerId]);
+const { rows: existCart }=await data.query("SELECT id FROM carts WHERE user_id = $1", [customerId]);
 if(existCart.length===0){
     return res.status(400).json({error:"Cart not found"});
 }
 
 const cartId=existCart[0].id;
-const [cartItems]=await data.query("SELECT dish_id,quantity FROM cart_items WHERE cart_id=?", [cartId]);
+const { rows: cartItems }=await data.query("SELECT dish_id, quantity FROM cart_items WHERE cart_id = $1", [cartId]);
 if(cartItems.length===0){
     return res.status(400).json({error:"Cart is empty"});
 }
@@ -576,43 +577,45 @@ catch(err)
 
 
 const makeOrder = async (req, res) => {
-  const connection = await data.getConnection();
+  const client = await data.connect();
 
   try {
-    await connection.beginTransaction();
+    await client.query('BEGIN');
 
     const customerId = req.user.id;
-    // أضفنا restaurantId
     const { is_reservation, reservation_date, lat, lng, restaurantId } = req.body;
     const location = await latLngToAddressOSM(lat, lng);
 
-    const [cartRows] = await connection.query("SELECT id FROM carts WHERE user_id=?", [customerId]);
+    const { rows: cartRows } = await client.query("SELECT id FROM carts WHERE user_id = $1", [customerId]);
 
-    if (cartRows.length === 0)
+    if (cartRows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: "Cart not found" });
+    }
 
     const cartId = cartRows[0].id;
-    
-    // لو فيه restaurantId، جيب بس الأطباق بتاعت المطعم ده
+
     let cartItemsQuery = `
       SELECT ci.dish_id, ci.quantity, d.price, d.restaurant_id, r.location as restaurant_location
       FROM cart_items ci
       JOIN dishes d ON ci.dish_id = d.id
       JOIN restaurant_profiles r ON d.restaurant_id = r.id
-      WHERE ci.cart_id=?
+      WHERE ci.cart_id = $1
     `;
-    
+
     const queryParams = [cartId];
-    
+
     if (restaurantId) {
-      cartItemsQuery += ` AND d.restaurant_id = ?`;
+      cartItemsQuery += ` AND d.restaurant_id = $2`;
       queryParams.push(restaurantId);
     }
-    
-    const [cartItems] = await connection.query(cartItemsQuery, queryParams);
 
-    if (cartItems.length === 0)
+    const { rows: cartItems } = await client.query(cartItemsQuery, queryParams);
+
+    if (cartItems.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: "Cart is empty or no items from selected restaurant" });
+    }
 
     const groupOfResCartDishes = {};
     for (const item of cartItems) {
@@ -622,19 +625,19 @@ const makeOrder = async (req, res) => {
       groupOfResCartDishes[item.restaurant_id].push(item);
     }
 
-    const restaurantCanResv = await data.query('SELECT restaurant_id FROM restaurant_delivery_areas WHERE can_reserve=1');
-    if (restaurantCanResv[0].length === 0 && is_reservation) {
+    const { rows: restaurantCanResvRows } = await client.query('SELECT restaurant_id FROM restaurant_delivery_areas WHERE can_reserve = true');
+    if (restaurantCanResvRows.length === 0 && is_reservation) {
       throw new Error("No restaurant available to receive reservations");
     }
 
     const createdOrders = [];
     const failedOrders = [];
-    const orderedDishIds = []; // لتتبع الأطباق اللي اتعمل لها order
+    const orderedDishIds = [];
 
     for (const resId of Object.keys(groupOfResCartDishes)) {
       try {
-        const [resRows] = await connection.query(
-          "SELECT is_open, location, allowed_radius_km, delivery_fees FROM restaurant_profiles WHERE id=?",
+        const { rows: resRows } = await client.query(
+          "SELECT is_open, location, allowed_radius_km, delivery_fees FROM restaurant_profiles WHERE id = $1",
           [resId]
         );
 
@@ -646,12 +649,12 @@ const makeOrder = async (req, res) => {
           continue;
         }
 
-        const deliveryareas = await data.query(
-          "SELECT delivery_area FROM restaurant_delivery_areas WHERE restaurant_id=?",
+        const { rows: deliveryareas } = await client.query(
+          "SELECT ST_AsGeoJSON(delivery_area) AS area FROM restaurant_delivery_areas WHERE restaurant_id = $1",
           [resId]
         );
 
-        if (deliveryareas[0].length === 0) {
+        if (deliveryareas.length === 0) {
           failedOrders.push({
             restaurantId: resId,
             reason: "Restaurant has no delivery areas defined"
@@ -659,14 +662,22 @@ const makeOrder = async (req, res) => {
           continue;
         }
 
-        const pointsNested = deliveryareas[0][0].delivery_area;
-        const points = pointsNested[0];
+        const geoJson = JSON.parse(deliveryareas[0].area);
+        const points = geoJson.coordinates[0] || [];
         let sumLat = 0, sumLng = 0;
 
         points.forEach(p => {
-          sumLng += p.x;
-          sumLat += p.y;
+          sumLng += p[0];
+          sumLat += p[1];
         });
+
+        if (points.length === 0) {
+          failedOrders.push({
+            restaurantId: resId,
+            reason: "Restaurant has invalid delivery area geometry"
+          });
+          continue;
+        }
 
         const lngOfRes = sumLng / points.length;
         const latOfRes = sumLat / points.length;
@@ -680,8 +691,11 @@ const makeOrder = async (req, res) => {
         const allowedRadius = resRows[0].allowed_radius_km;
         const delivery_fees = resRows[0].delivery_fees;
 
-        const [distanceRows] = await connection.query(
-          `SELECT ST_Distance_Sphere(POINT(?, ?), POINT(?, ?)) AS distance`,
+        const { rows: distanceRows } = await client.query(
+          `SELECT ST_Distance_Sphere(
+             ST_SetSRID(ST_MakePoint($1, $2), 4326),
+             ST_SetSRID(ST_MakePoint($3, $4), 4326)
+           ) AS distance`,
           [lng, lat, lngOfRes, latOfRes]
         );
 
@@ -700,20 +714,19 @@ const makeOrder = async (req, res) => {
         deliveryFee = parseFloat((delivery_fees * distanceInKm).toFixed(2));
         totalAmount += deliveryFee;
 
-        const [orderResult] = await connection.query(
-          `INSERT INTO orders (user_id, restaurant_id, is_reservation, reservation_date, location, lat, lng, total_amount, delivery_fee, status) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        const orderResult = await client.query(
+          `INSERT INTO orders (user_id, restaurant_id, is_reservation, reservation_date, location, lat, lng, total_amount, delivery_fee, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending') RETURNING id`,
           [customerId, resId, is_reservation || false, reservation_date || null, location, lat, lng, totalAmount, deliveryFee]
         );
 
-        const orderId = orderResult.insertId;
+        const orderId = orderResult.rows[0].id;
 
         for (const item of groupOfResCartDishes[resId]) {
-          await connection.query(
-            `INSERT INTO order_items (order_id, dish_id, quantity, price) VALUES (?, ?, ?, ?)`,
+          await client.query(
+            `INSERT INTO order_items (order_id, dish_id, quantity, price) VALUES ($1, $2, $3, $4)`,
             [orderId, item.dish_id, item.quantity, item.price]
           );
-          // أضف الـ dish_id للقائمة عشان نمسحه بعدين
           orderedDishIds.push(item.dish_id);
         }
 
@@ -747,23 +760,23 @@ const makeOrder = async (req, res) => {
       }
     }
 
-    // امسح بس الأطباق اللي اتعمل لها order
     if (orderedDishIds.length > 0) {
-      await connection.query(
-        `DELETE FROM cart_items WHERE cart_id=? AND dish_id IN (${orderedDishIds.map(() => '?').join(',')})`,
+      const deletePlaceholders = orderedDishIds.map((_, i) => `$${i + 2}`).join(',');
+      await client.query(
+        `DELETE FROM cart_items WHERE cart_id = $1 AND dish_id IN (${deletePlaceholders})`,
         [cartId, ...orderedDishIds]
       );
     }
 
     if (createdOrders.length === 0) {
-      await connection.rollback();
+      await client.query('ROLLBACK');
       return res.status(400).json({
         error: "No orders created",
         failedOrders
       });
     }
 
-    await connection.commit();
+    await client.query('COMMIT');
 
     return res.status(201).json({
       message: "Order processing completed",
@@ -772,11 +785,11 @@ const makeOrder = async (req, res) => {
     });
 
   } catch (err) {
-    await connection.rollback();
+    await client.query('ROLLBACK');
     console.error("Error:", err.message);
     return res.status(500).json({ error: err.message });
   } finally {
-    connection.release();
+    client.release();
   }
 };
 
@@ -785,9 +798,9 @@ const getOrdersForCustomer = async (req, res) => {
   try {
     const customerId = req.user.id;
 
-    const [rows] = await data.query(
+    const { rows } = await data.query(
       `
-      SELECT 
+      SELECT
           o.id,
           o.restaurant_id,
           o.total_amount,
@@ -810,13 +823,12 @@ const getOrdersForCustomer = async (req, res) => {
       INNER JOIN order_items ol ON o.id = ol.order_id
       INNER JOIN dishes d ON d.id = ol.dish_id
       LEFT JOIN payments p ON p.order_id = o.id
-      WHERE o.user_id = ?
+      WHERE o.user_id = $1
       ORDER BY o.created_at DESC
       `,
       [customerId]
     );
 
-    // تجميع الأطباق جوه كل طلب
     const ordersMap = {};
 
     rows.forEach((row) => {
@@ -835,7 +847,6 @@ const getOrdersForCustomer = async (req, res) => {
         };
       }
 
-      // إضافة الطبق للطلب
       ordersMap[row.id].items.push({
         dish_id: row.dish_id,
         dish_name: row.dish_name,

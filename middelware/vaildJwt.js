@@ -24,7 +24,7 @@ console.log('Authenticated user:', req.user);
 
 const verifyRoleForRestaurant=async(req,res,next)=>{
   const restaurant=req.user;
-    const [rows] = await data.query('Select id from restaurant_profiles where user_id=?',[restaurant.id]);
+    const { rows } = await data.query('SELECT id FROM restaurant_profiles WHERE user_id = $1',[restaurant.id]);
 req.user.restaurantProfileId=rows[0]?.id;
 
   if(rows.length===0){
@@ -42,7 +42,7 @@ const verifyResturntAreActive=async(req,res,next)=>
 {
 const restaurantId=req.user.id;
 
-const [rows]=await data.query("SELECT is_verified FROM restaurant_profiles WHERE user_id=?", [restaurantId]);
+const { rows }=await data.query("SELECT is_verified FROM restaurant_profiles WHERE user_id = $1", [restaurantId]);
 if(rows.length===0)
 {
     return res.status(400).json({error:"Restaurant profile not found"});

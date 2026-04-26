@@ -34,8 +34,8 @@ const sendOTPEmail = async (req, res) => {
       return res.status(400).json({ error: "Email and phone are required" });
     }
 
-    const [existing] = await data.query(
-      "SELECT id FROM users WHERE email = ? OR phone = ?",
+    const { rows: existing } = await data.query(
+      "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
 
@@ -85,8 +85,8 @@ const signupForCustomer = async (req, res) => {
 
     otpCache.del(email);
 
-    const [userExists] = await data.query(
-      "SELECT id FROM users WHERE email=? OR phone=?",
+    const { rows: userExists } = await data.query(
+      "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
 
@@ -97,7 +97,7 @@ const signupForCustomer = async (req, res) => {
     const hashPassword = await bcryptJs.hash(password, 11);
 
     await data.query(
-      "INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO users (name, email, password, role, phone) VALUES ($1, $2, $3, $4, $5)",
       [name, email, hashPassword, role, phone]
     );
 
@@ -115,7 +115,7 @@ const loginForCustomer = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [userRows] = await data.query("SELECT * FROM users WHERE email=?", [email]);
+    const { rows: userRows } = await data.query("SELECT * FROM users WHERE email = $1", [email]);
 
     if (userRows.length === 0) {
       return res.status(400).json({ error: "Invalid email or password" });
@@ -161,7 +161,7 @@ const loginForCustomer = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = req.user.id;
-    const [userRows] = await data.query("SELECT id,name,email,role,phone FROM users WHERE id=?", [user]);
+    const { rows: userRows } = await data.query("SELECT id, name, email, role, phone FROM users WHERE id = $1", [user]);
     if (userRows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -185,7 +185,7 @@ const changeUserInfoForCustomer = async (req, res) => {
       return res.status(400).json({ error: "Name or phone are required" });
     }
 
-    await data.query("UPDATE users SET name=?, phone=? WHERE id=?", [name, phone, userId]);
+    await data.query("UPDATE users SET name = $1, phone = $2 WHERE id = $3", [name, phone, userId]);
 
     return res.status(200).json({ message: "User info updated successfully", name, phone });
   } catch (err) {
@@ -198,7 +198,7 @@ const loginForAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [userRows] = await data.query("SELECT * FROM users WHERE email=?", [email]);
+    const { rows: userRows } = await data.query("SELECT * FROM users WHERE email = $1", [email]);
     if (userRows.length === 0) {
       return res.status(400).json({ error: "Invalid email or password" });
     }

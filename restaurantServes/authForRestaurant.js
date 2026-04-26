@@ -33,8 +33,8 @@ const sendOTPEmail = async (req, res) => {
       return res.status(400).json({ error: "Email and phone are required" });
     }
 
-    const [existing] = await data.query(
-      "SELECT id FROM users WHERE email = ? OR phone = ?",
+    const { rows: existing } = await data.query(
+      "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
 
@@ -87,19 +87,19 @@ if(cachedOTP!==otp)
       otpCache.del(email);
 
 
-const [existingRows]=await data.query("SELECT * FROM users WHERE email=?  or phone=?", [email,phone]);
+const { rows: existingRows }=await data.query("SELECT * FROM users WHERE email = $1 OR phone = $2", [email,phone]);
 if(existingRows.length>0)
 {
     return res.status(400).json({error:"User with this email or phone already exists"});
 }
 const role='restaurant';
 const hashPassword=await bcryptJs.hash(password,11);
-await data.query("INSERT INTO users (name,email,password,role,phone) VALUES (?,?,?,?,?)",[name,email,hashPassword,role,phone]);
+await data.query("INSERT INTO users (name, email, password, role, phone) VALUES ($1, $2, $3, $4, $5)",[name,email,hashPassword,role,phone]);
 
-const userId= await data.query("SELECT id FROM users WHERE email=?", [email]);
-await data.query("INSERT INTO restaurant_profiles (user_id,description,location,allowed_radius_km,open_time,close_time) VALUES (?,?,?,?,?,?)",[userId[0][0].id,description,location,allowed_radius_km,open_time,close_time]);
+const { rows: userIdRows }= await data.query("SELECT id FROM users WHERE email = $1", [email]);
+await data.query("INSERT INTO restaurant_profiles (user_id, description, location, allowed_radius_km, open_time, close_time) VALUES ($1, $2, $3, $4, $5, $6)",[userIdRows[0].id,description,location,allowed_radius_km,open_time,close_time]);
 
-const restaurantProfileId= await data.query("SELECT id FROM restaurant_profiles WHERE user_id=?", [userId[0][0].id]);
+const { rows: restaurantProfileRows }= await data.query("SELECT id FROM restaurant_profiles WHERE user_id = $1", [userIdRows[0].id]);
 
 const polygonString = `POLYGON((${delivery_area
   .map(coord => `${coord[0]} ${coord[1]}`)
@@ -108,9 +108,9 @@ const polygonString = `POLYGON((${delivery_area
 await data.query(
   `INSERT INTO restaurant_delivery_areas
    (restaurant_id, area_name, can_deliver, can_reserve, delivery_area)
-   VALUES (?, ?, ?, ?, ST_GeomFromText(?, 4326))`,
+   VALUES ($1, $2, $3, $4, ST_GeomFromText($5, 4326))`,
   [
-    restaurantProfileId[0][0].id,
+    restaurantProfileRows[0].id,
     area_name,
     can_deliver,
     can_reserve,
@@ -136,7 +136,7 @@ try
 {
 const {email,password}=req.body;
 
-const [userRows]=await data.query("SELECT * FROM users WHERE email=?", [email]);
+const { rows: userRows }=await data.query("SELECT * FROM users WHERE email = $1", [email]);
 if(userRows.length===0)
 {
     return res.status(400).json({error:"Invalid email or password"});
@@ -185,24 +185,24 @@ const restaurantProfile=async(req,res)=>
 try
 {
 const restaurantId=req.user.restaurantProfileId;
-const [restaurantRows]=await data.query("SELECT * FROM restaurant_profiles WHERE id=?", [restaurantId]);
+const { rows: restaurantRows }=await data.query("SELECT * FROM restaurant_profiles WHERE id = $1", [restaurantId]);
 if(restaurantRows.length===0)
 {
     return res.status(400).json({error:"Restaurant profile not found"});
 }
 
 const restaurantProfile=restaurantRows[0];
-const dishesRows=await data.query("SELECT * FROM dishes WHERE restaurant_id=?", [restaurantId]);
+const { rows: dishesRows }=await data.query("SELECT * FROM dishes WHERE restaurant_id = $1", [restaurantId]);
 
-const resMoreInfo= await data.query("SELECT name,email,phone,(SELECT delivery_fees FROM restaurant_profiles WHERE user_id=?) as delivery_fees FROM users WHERE id=?", [restaurantProfile.user_id,restaurantProfile.user_id]);
+const { rows: resMoreInfoRows }= await data.query("SELECT name, email, phone, (SELECT delivery_fees FROM restaurant_profiles WHERE user_id = $1) as delivery_fees FROM users WHERE id = $2", [restaurantProfile.user_id,restaurantProfile.user_id]);
 
-restaurantProfile.name=resMoreInfo[0][0].name;
-restaurantProfile.email=resMoreInfo[0][0].email;
-restaurantProfile.phone=resMoreInfo[0][0].phone;
-restaurantProfile.delivery_fees=resMoreInfo[0][0].delivery_fees;
+restaurantProfile.name=resMoreInfoRows[0].name;
+restaurantProfile.email=resMoreInfoRows[0].email;
+restaurantProfile.phone=resMoreInfoRows[0].phone;
+restaurantProfile.delivery_fees=resMoreInfoRows[0].delivery_fees;
 
 return res.status(200).json({"restaurantProfile":{
-    name:restaurantProfile.name,email:restaurantProfile.email,phone:restaurantProfile.phone,description:restaurantProfile.description,location:restaurantProfile.location,allowed_radius_km:restaurantProfile.allowed_radius_km,open_time:restaurantProfile.open_time,close_time:restaurantProfile.close_time,delivery_fees:restaurantProfile.delivery_fees},"dishes":dishesRows[0]});
+    name:restaurantProfile.name,email:restaurantProfile.email,phone:restaurantProfile.phone,description:restaurantProfile.description,location:restaurantProfile.location,allowed_radius_km:restaurantProfile.allowed_radius_km,open_time:restaurantProfile.open_time,close_time:restaurantProfile.close_time,delivery_fees:restaurantProfile.delivery_fees},"dishes":dishesRows});
 
 }
 catch(err)
@@ -215,22 +215,23 @@ catch(err)
 
 const changeResturantinfo=async(req,res)=>
 {
-    const connection = await data.getConnection();
+    const client = await data.connect();
 try
 {
-    await connection.beginTransaction();
+    await client.query('BEGIN');
     const restaurantId=req.user.restaurantProfileId;
     const {description,location,allowed_radius_km,open_time,close_time,name,email,phone,delivery_fees}=req.body;
-    const [existingRows]=await connection.query("SELECT id FROM users WHERE (email = ? OR phone = ?) AND id <> (SELECT user_id FROM restaurant_profiles WHERE id = ?)", [email,phone,restaurantId]);
+    const { rows: existingRows }=await client.query("SELECT id FROM users WHERE (email = $1 OR phone = $2) AND id <> (SELECT user_id FROM restaurant_profiles WHERE id = $3)", [email,phone,restaurantId]);
     if(existingRows.length>0)
     {
+        await client.query('ROLLBACK');
         return res.status(400).json({error:"Another user with this email or phone already exists"});
     }
 
-    await connection.query("UPDATE restaurant_profiles SET description=?, location=?, allowed_radius_km=?, open_time=?, close_time=? , delivery_fees=? WHERE id=?", [description,location,allowed_radius_km,open_time,close_time,delivery_fees,restaurantId]);
-    await connection.query("UPDATE users SET name=?, email=?, phone=? WHERE id=(SELECT user_id FROM restaurant_profiles WHERE id=?)", [name,email,phone,restaurantId]);
+    await client.query("UPDATE restaurant_profiles SET description = $1, location = $2, allowed_radius_km = $3, open_time = $4, close_time = $5, delivery_fees = $6 WHERE id = $7", [description,location,allowed_radius_km,open_time,close_time,delivery_fees,restaurantId]);
+    await client.query("UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = (SELECT user_id FROM restaurant_profiles WHERE id = $4)", [name,email,phone,restaurantId]);
 
-    await connection.commit();
+    await client.query('COMMIT');
 
     return res.status(200).json({message:"Restaurant information updated successfully"});
 
@@ -238,14 +239,18 @@ try
 catch(err)
 {
     console.error("Error:",err);
-    await connection.rollback();
+    await client.query('ROLLBACK');
     return res.status(500).json({error:"Internal server error"});   
-}};
+}
+finally {
+    client.release();
+}
+};
 
 const updateRestaurantLocation = async (req, res) => {
-  const connection = await data.getConnection();
+  const client = await data.connect();
   try {
-    await connection.beginTransaction();
+    await client.query('BEGIN');
     
     const restaurantId = req.user.restaurantProfileId;
     const {
@@ -257,8 +262,8 @@ const updateRestaurantLocation = async (req, res) => {
       location
     } = req.body;
     
-    await connection.query(
-      "UPDATE restaurant_profiles SET location = ?, allowed_radius_km = ? WHERE id = ?",
+    await client.query(
+      "UPDATE restaurant_profiles SET location = $1, allowed_radius_km = $2 WHERE id = $3",
       [location, allowed_radius_km, restaurantId]
     );
     
@@ -266,19 +271,19 @@ const updateRestaurantLocation = async (req, res) => {
       .map(coord => `${coord[0]} ${coord[1]}`)
       .join(", ")}))`;
     
-    await connection.query(
-      "DELETE FROM restaurant_delivery_areas WHERE restaurant_id = ?",
+    await client.query(
+      "DELETE FROM restaurant_delivery_areas WHERE restaurant_id = $1",
       [restaurantId]
     );
     
-    await connection.query(
+    await client.query(
       `INSERT INTO restaurant_delivery_areas
        (restaurant_id, area_name, can_deliver, can_reserve, delivery_area)
-       VALUES (?, ?, ?, ?, ST_GeomFromText(?, 4326))`,
+       VALUES ($1, $2, $3, $4, ST_GeomFromText($5, 4326))`,
       [restaurantId, area_name, can_deliver, can_reserve, polygonString]
     );
     
-    await connection.commit();
+    await client.query('COMMIT');
     
     return res.status(200).json({ 
       message: "Location and delivery area updated successfully" 
@@ -286,10 +291,10 @@ const updateRestaurantLocation = async (req, res) => {
     
   } catch (err) {
     console.error("Error updating location:", err);
-    await connection.rollback();
+    await client.query('ROLLBACK');
     return res.status(500).json({ error: "Internal server error" });
   } finally {
-    connection.release();
+    client.release();
   }
 };
 
@@ -297,7 +302,7 @@ const changeRestaurantPassword = async (req, res) => {
   try {
     const restaurantId = req.user.restaurantProfileId;
     const { oldPassword, newPassword } = req.body;
-    const [userRows] = await data.query("SELECT u.password FROM users u JOIN restaurant_profiles rp ON u.id=rp.user_id WHERE rp.id=?", [restaurantId]);
+    const { rows: userRows } = await data.query("SELECT u.password FROM users u JOIN restaurant_profiles rp ON u.id = rp.user_id WHERE rp.id = $1", [restaurantId]);
     if (userRows.length === 0) {
       return res.status(400).json({ error: "Restaurant profile not found" });
     }
@@ -309,7 +314,7 @@ if(!isOldPasswordValid)
 }
 
 const hashNewPassword=await bcryptJs.hash(newPassword,11);
-await data.query("UPDATE users SET password=? WHERE id=(SELECT user_id FROM restaurant_profiles WHERE id=?)", [hashNewPassword,restaurantId]);
+await data.query("UPDATE users SET password = $1 WHERE id = (SELECT user_id FROM restaurant_profiles WHERE id = $2)", [hashNewPassword,restaurantId]);
 return res.status(200).json({message:"Password updated successfully"});
 
     }
@@ -327,7 +332,7 @@ try
     const restaurantId=req.user.restaurantProfileId;
     const {delivery_fees}=req.body;
 
-    await data.query("UPDATE restaurant_profiles SET delivery_fees=? WHERE id=?", [delivery_fees, restaurantId]);
+    await data.query("UPDATE restaurant_profiles SET delivery_fees = $1 WHERE id = $2", [delivery_fees, restaurantId]);
 
     return res.status(200).json({message:"Delivery fees updated successfully"});
 
@@ -345,7 +350,7 @@ const restaurantProfileStatus=async(req,res)=>
 try
 {
     const restaurantId=req.user.restaurantProfileId;
-    const [statuOfRes]=await data.query("SELECT is_open FROM restaurant_profiles WHERE id=?", [restaurantId]);
+    const { rows: statuOfRes }=await data.query("SELECT is_open FROM restaurant_profiles WHERE id = $1", [restaurantId]);
     if(statuOfRes.length===0)
     {
         return res.status(400).json({error:"Restaurant profile not found"});
@@ -366,23 +371,23 @@ const openOrCloseRestaurant=async(req,res)=>
 try{
 
 const restaurantId=req.user.restaurantProfileId;
-const statuOfRes=await data.query("SELECT is_open FROM restaurant_profiles WHERE id=?", [restaurantId]);
+const { rows: statuOfRes }=await data.query("SELECT is_open FROM restaurant_profiles WHERE id = $1", [restaurantId]);
 if(statuOfRes.length===0)
 {
     return res.status(400).json({error:"Restaurant profile not found"});
 
 }
-const statu=statuOfRes[0][0].is_open;
+const statu=statuOfRes[0].is_open;
 let  newStatu=statu;
-if(statu==1)
+if(statu===true)
 {
-    newStatu=0;
+    newStatu=false;
 }
-else if(statu==0)
+else if(statu===false)
 {
-    newStatu=1;
+    newStatu=true;
 }
-await data.query("UPDATE restaurant_profiles SET is_open=? WHERE id=?", [newStatu, restaurantId]);
+await data.query("UPDATE restaurant_profiles SET is_open = $1 WHERE id = $2", [newStatu, restaurantId]);
 return res.status(200).json({message:"Restaurant status updated successfully", is_open:newStatu});
 }
 catch(err)
@@ -395,11 +400,11 @@ catch(err)
 const getDashboardStats = async (req, res) => {
     try {
         const restaurantId = req.user.restaurantProfileId;
-        const [restaurantInfo] = await data.query(
+        const { rows: restaurantInfo } = await data.query(
             `SELECT rp.*, u.name, u.email, u.phone 
              FROM restaurant_profiles rp
              JOIN users u ON rp.user_id = u.id
-             WHERE rp.id = ?`,
+             WHERE rp.id = $1`,
             [restaurantId]
         );
 
@@ -407,13 +412,13 @@ const getDashboardStats = async (req, res) => {
             return res.status(404).json({ error: "Restaurant not found" });
         }
 
-        const [dishesCount] = await data.query("SELECT COUNT(*) as total_dishes FROM dishes WHERE restaurant_id = ?", [restaurantId]);
-        const [availableDishes] = await data.query("SELECT COUNT(*) as available_dishes FROM dishes WHERE restaurant_id = ? AND is_available = 1", [restaurantId]);
-        const [todayOrders] = await data.query(`SELECT COUNT(*) as today_orders, COALESCE(SUM(total_amount), 0) as today_revenue FROM orders WHERE restaurant_id = ? AND DATE(created_at) = CURDATE()`, [restaurantId]);
-        const [pendingOrders] = await data.query("SELECT COUNT(*) as pending_orders FROM orders WHERE restaurant_id = ? AND status = 'pending'", [restaurantId]);
-        const [totalOrders] = await data.query(`SELECT COUNT(*) as total_orders, COALESCE(SUM(total_amount), 0) as total_revenue FROM orders WHERE restaurant_id = ?`, [restaurantId]);
-        const [recentOrders] = await data.query(`SELECT o.id, o.total_amount, o.status, o.created_at, u.name as customer_name, u.phone as customer_phone FROM orders o JOIN users u ON o.user_id = u.id WHERE o.restaurant_id = ? ORDER BY o.created_at DESC LIMIT 10`, [restaurantId]);
-        const [topDishes] = await data.query(`SELECT d.id, d.name, d.price, d.image, COUNT(oi.id) as order_count, SUM(oi.quantity) as total_quantity, SUM(oi.quantity * oi.price) as total_revenue FROM dishes d LEFT JOIN order_items oi ON d.id = oi.dish_id WHERE d.restaurant_id = ? GROUP BY d.id ORDER BY total_quantity DESC LIMIT 5`, [restaurantId]);
+        const { rows: dishesCount } = await data.query("SELECT COUNT(*) as total_dishes FROM dishes WHERE restaurant_id = $1", [restaurantId]);
+        const { rows: availableDishes } = await data.query("SELECT COUNT(*) as available_dishes FROM dishes WHERE restaurant_id = $1 AND is_available = true", [restaurantId]);
+        const { rows: todayOrders } = await data.query(`SELECT COUNT(*) as today_orders, COALESCE(SUM(total_amount), 0) as today_revenue FROM orders WHERE restaurant_id = $1 AND DATE(created_at) = CURRENT_DATE`, [restaurantId]);
+        const { rows: pendingOrders } = await data.query("SELECT COUNT(*) as pending_orders FROM orders WHERE restaurant_id = $1 AND status = 'pending'", [restaurantId]);
+        const { rows: totalOrders } = await data.query(`SELECT COUNT(*) as total_orders, COALESCE(SUM(total_amount), 0) as total_revenue FROM orders WHERE restaurant_id = $1`, [restaurantId]);
+        const { rows: recentOrders } = await data.query(`SELECT o.id, o.total_amount, o.status, o.created_at, u.name as customer_name, u.phone as customer_phone FROM orders o JOIN users u ON o.user_id = u.id WHERE o.restaurant_id = $1 ORDER BY o.created_at DESC LIMIT 10`, [restaurantId]);
+        const { rows: topDishes } = await data.query(`SELECT d.id, d.name, d.price, d.image, COUNT(oi.id) as order_count, SUM(oi.quantity) as total_quantity, SUM(oi.quantity * oi.price) as total_revenue FROM dishes d LEFT JOIN order_items oi ON d.id = oi.dish_id WHERE d.restaurant_id = $1 GROUP BY d.id ORDER BY total_quantity DESC LIMIT 5`, [restaurantId]);
 
         return res.status(200).json({
             restaurant: restaurantInfo[0],
@@ -445,27 +450,29 @@ const getRestaurantOrders = async (req, res) => {
             FROM orders o
             JOIN payments p ON o.id = p.order_id
             JOIN users u ON o.user_id = u.id
-            WHERE o.restaurant_id = ?
+            WHERE o.restaurant_id = $1
         `;
 
         const params = [restaurantId];
+        let paramIndex = 2;
 
         if (status) {
-            query += ` AND o.status = ?`;
+            query += ` AND o.status = $${paramIndex}`;
             params.push(status);
+            paramIndex += 1;
         }
 
-        query += ` ORDER BY o.created_at DESC LIMIT ? OFFSET ?`;
-        params.push(parseInt(limit), parseInt(offset));
+        query += ` ORDER BY o.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(parseInt(limit, 10), parseInt(offset, 10));
 
-        const [orders] = await data.query(query, params);
+        const { rows: orders } = await data.query(query, params);
 
         for (let order of orders) {
-            const [items] = await data.query(
+            const { rows: items } = await data.query(
                 `SELECT oi.*, d.name as dish_name, d.image as dish_image
                  FROM order_items oi
                  JOIN dishes d ON oi.dish_id = d.id
-                 WHERE oi.order_id = ?`,
+                 WHERE oi.order_id = $1`,
                 [order.id]
             );
             order.items = items;
@@ -490,13 +497,13 @@ const updateOrderStatus = async (req, res) => {
             return res.status(400).json({ error: "Invalid status" });
         }
 
-        const [orderCheck] = await data.query("SELECT id FROM orders WHERE id = ? AND restaurant_id = ?", [orderId, restaurantId]);
+        const { rows: orderCheck } = await data.query("SELECT id FROM orders WHERE id = $1 AND restaurant_id = $2", [orderId, restaurantId]);
 
         if (orderCheck.length === 0) {
             return res.status(404).json({ error: "Order not found" });
         }
 
-        await data.query("UPDATE orders SET status = ? WHERE id = ?", [status, orderId]);
+        await data.query("UPDATE orders SET status = $1 WHERE id = $2", [status, orderId]);
 
         return res.status(200).json({ message: "Order status updated successfully" });
 

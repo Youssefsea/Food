@@ -5,7 +5,7 @@ const getChatRoomsForCustomer = async (req, res) => {
     try {
         const customerId = req.user.id;
 
-        const [rooms] = await data.query(
+        const { rows: rooms } = await data.query(
             `SELECT cr.id, cr.order_id,cr.created_at,
                     u.name as restaurant_name,
                     o.status as order_status,
@@ -15,7 +15,7 @@ const getChatRoomsForCustomer = async (req, res) => {
              INNER JOIN restaurant_profiles rp ON cr.restaurant_id = rp.id
              INNER JOIN users u ON rp.user_id = u.id
              INNER JOIN orders o ON cr.order_id = o.id
-             WHERE cr.customer_id = ?
+             WHERE cr.customer_id = $1
                 ORDER BY cr.created_at DESC`,
             [customerId]
         );
@@ -37,7 +37,7 @@ const getChatRoomsForRestaurant = async (req, res) => {
        // ✅ صح - استخدم users.id لأن chat_rooms.restaurant_id بيخزن users.id
 const restaurantProfileId = req.user.id;
 
-        const [rooms] = await data.query(
+        const { rows: rooms } = await data.query(
             `SELECT cr.id, cr.order_id, cr.created_at,
                     u.name as customer_name,
                     o.status as order_status,
@@ -46,7 +46,7 @@ const restaurantProfileId = req.user.id;
              FROM chat_rooms cr
              INNER JOIN users u ON cr.customer_id = u.id
              INNER JOIN orders o ON cr.order_id = o.id
-             WHERE cr.restaurant_id = ?
+             WHERE cr.restaurant_id = $1
              ORDER BY cr.created_at DESC`,
             [restaurantProfileId]
         );
@@ -69,8 +69,8 @@ const getChatMessages = async (req, res) => {
         const { roomId } = req.params;
 
         // التحقق من وجود الغرفة
-        const [roomRows] = await data.query(
-            'SELECT * FROM chat_rooms WHERE id = ?',
+        const { rows: roomRows } = await data.query(
+            'SELECT * FROM chat_rooms WHERE id = $1',
             [roomId]
         );
 
@@ -98,11 +98,11 @@ const getChatMessages = async (req, res) => {
         }
 
         // جلب الرسائل
-        const [messages] = await data.query(
+        const { rows: messages } = await data.query(
             `SELECT cm.*, u.name as sender_name, u.role as sender_role
              FROM chat_messages cm 
              LEFT JOIN users u ON cm.sender_id = u.id 
-             WHERE cm.room_id = ? 
+             WHERE cm.room_id = $1 
              ORDER BY cm.created_at ASC`,
             [roomId]
         );
@@ -133,8 +133,8 @@ const getChatRoomByOrderId = async (req, res) => {
         const { orderId } = req.params;
 
         // البحث عن الغرفة
-        const [roomRows] = await data.query(
-            'SELECT * FROM chat_rooms WHERE order_id = ?',
+        const { rows: roomRows } = await data.query(
+            'SELECT * FROM chat_rooms WHERE order_id = $1',
             [orderId]
         );
 

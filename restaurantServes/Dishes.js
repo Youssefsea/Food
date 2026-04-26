@@ -36,7 +36,7 @@ if(!imges || imges.length===0)
 
     const image_url = imageUrls.join(",");
 
-const insertDish=await data.query("INSERT INTO dishes (restaurant_id,name,description,price,preparation_time,category,image) VALUES (?,?,?,?,?,?,?)",[restaurantId,name,description,price,preparation_time,category,image_url]);
+const insertDish=await data.query("INSERT INTO dishes (restaurant_id, name, description, price, preparation_time, category, image) VALUES ($1, $2, $3, $4, $5, $6, $7)",[restaurantId,name,description,price,preparation_time,category,image_url]);
 
 return res.status(201).json({message:"Dish added successfully"},insertDish);
 
@@ -53,10 +53,10 @@ catch(err)
 
 const getAllResDishes = async (req, res) => {
   try {
-    const result = await data.query(`
+        const { rows: resultRows } = await data.query(`
       SELECT 
           restaurant_id,
-          GROUP_CONCAT(image ORDER BY image SEPARATOR ',') AS images
+                    STRING_AGG(image, ',' ORDER BY image) AS images
       FROM (
           SELECT 
               restaurant_id,
@@ -71,7 +71,7 @@ const getAllResDishes = async (req, res) => {
       GROUP BY restaurant_id;
     `);
 
-    const dataWithArrays = result[0].map(row => ({
+        const dataWithArrays = resultRows.map(row => ({
       restaurant_id: row.restaurant_id,
       images: row.images ? row.images.split(',') : []
     }));
@@ -90,9 +90,9 @@ const getAllDishesForRestaurantVendor=async(req,res)=>
 
         const restaurantId=req.user.restaurantProfileId;
 
-    const dishesRows=await data.query("SELECT * FROM dishes WHERE restaurant_id=?", [restaurantId]);
+    const { rows: dishesRows }=await data.query("SELECT * FROM dishes WHERE restaurant_id = $1", [restaurantId]);
   
-     return res.status(200).json({dishes:dishesRows[0]});
+     return res.status(200).json({dishes:dishesRows});
      
     }
     catch(err)
@@ -110,10 +110,10 @@ const getAllDishesForRestaurantExplore=async(req,res)=>
 
         const restaurantId=req.body.restaurantId;
 
-    const dishesRows=await data.query("SELECT * FROM dishes WHERE restaurant_id=? AND is_available=1", [restaurantId]);
+    const { rows: dishesRows }=await data.query("SELECT * FROM dishes WHERE restaurant_id = $1 AND is_available = true", [restaurantId]);
   
     
-     return res.status(200).json({dishes:dishesRows[0]});
+     return res.status(200).json({dishes:dishesRows});
      
     }
     catch(err)
@@ -130,7 +130,7 @@ const changeResturantDish=async(req,res)=>
     try{
 const restaurantId=req.user.restaurantProfileId;
 const {name,description,price,preparation_time,category,dishId}=req.body;
-await data.query("UPDATE dishes SET name=?, description=?, price=?, preparation_time=?, category=? WHERE restaurant_id=? AND id=?", [name,description,price,preparation_time,category,restaurantId,dishId]);
+await data.query("UPDATE dishes SET name = $1, description = $2, price = $3, preparation_time = $4, category = $5 WHERE restaurant_id = $6 AND id = $7", [name,description,price,preparation_time,category,restaurantId,dishId]);
 
 return res.status(200).json({message:"Dish information updated successfully"});
 
@@ -149,7 +149,7 @@ const changeDishAvailability=async(req,res)=>
 const restaurantId=req.user.restaurantProfileId;
 const {dishId,is_available}=req.body;
 
-await data.query("UPDATE dishes SET is_available=? WHERE restaurant_id=? AND id=?", [is_available,restaurantId,dishId]);
+await data.query("UPDATE dishes SET is_available = $1 WHERE restaurant_id = $2 AND id = $3", [is_available,restaurantId,dishId]);
 
 return res.status(200).json({message:"Dish availability updated successfully"});
 
@@ -168,7 +168,7 @@ const delelteDish=async(req,res)=>
     {
 const restaurantId=req.user.restaurantProfileId;
 const {dishId}=req.body;
-await data.query("DELETE FROM dishes WHERE restaurant_id=? AND id=?", [restaurantId,dishId]);
+await data.query("DELETE FROM dishes WHERE restaurant_id = $1 AND id = $2", [restaurantId,dishId]);
 
 return res.status(200).json({message:"Dish deleted successfully"});
 }

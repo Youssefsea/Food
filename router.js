@@ -67,7 +67,6 @@ router.post('/restaurant/all-dishes-for-restaurantE', dishes.getAllDishesForRest
 
 router.get('/restaurant/search-by-name', orders.lookForResByName);
 
-// Chat routes للزبون
 router.get('/customer/chat-rooms', middelware.sureToken, middelware.verifyRoleForCustomer, chat.getChatRoomsForCustomer);
 router.get('/customer/chat-room/order/:orderId', middelware.sureToken, middelware.verifyRoleForCustomer, chat.getChatRoomByOrderId);
 router.get('/customer/chat-messages/:roomId', middelware.sureToken, middelware.verifyRoleForCustomer, chat.getChatMessages);
