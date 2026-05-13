@@ -28,7 +28,8 @@ router.post('/customer/nearest-restaurants', middelware.sureToken,middelware.ver
 router.get('/customer/can-restaurant-receive-order', middelware.sureToken,middelware.verifyRoleForCustomer, orders.restaurantsWhoCanResiveOrder);
 router.post('/customer/place-order', middelware.sureToken,middelware.verifyRoleForCustomer, orders.makeOrder);
 router.put('/customer/update-dish-quantity-in-cart', middelware.sureToken,middelware.verifyRoleForCustomer, orders.updateDishQuantityInCart);
-
+router.post('/room/:roomId/message', middelware.sureToken, chat.sendMessage);
+router.post('/pusher/auth', middelware.sureToken, chat.pusherAuth); 
 router.post('/customer/upload-payment-proof', middelware.sureToken, middelware.verifyRoleForCustomer, upload.array('images', 1), payments.uploadPaymentProof);
 router.post('/customer/payment-status', middelware.sureToken, middelware.verifyRoleForCustomer, payments.getPaymentStatus);
 

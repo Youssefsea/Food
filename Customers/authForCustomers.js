@@ -1,106 +1,162 @@
 const data = require("../data/data");
 const bcryptJs = require("bcryptjs");
 const crypto = require("crypto");
-const NodeCache = require("node-cache");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend"); 
 const { createToken } = require("../middelware/jwtmake");
+const jwt = require("jsonwebtoken");
+ 
+const resend = new Resend(process.env.RESEND_API_KEY);
+ 
+const sendEmail = async (email, otp) => {
+  const { error } = await resend.emails.send({
+    from: "onboarding@resend.dev",
+    to: email,
+    subject: "🍕 كود التحقق من أكلي",
+    html: `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:2rem 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;">
 
-const otpCache = new NodeCache({ stdTTL: 60, checkperiod: 10 });
+        <tr>
+          <td style="background:#E8502A;padding:2rem;text-align:center;">
+            <div style="font-size:32px;margin-bottom:6px;">🍕</div>
+            <div style="color:#fff;font-size:22px;font-weight:bold;">أكلي</div>
+            <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:4px;">اطلب أكلك المفضل</div>
+          </td>
+        </tr>
 
-async function sendEmail(to, OTP) {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: "yassefsea274@gmail.com",
-      pass: "vjgf odiu nnul krpg",
-    },
+        <tr>
+          <td style="padding:2rem;text-align:center;">
+            <p style="font-size:16px;color:#111;margin:0 0 8px;">مرحباً 👋</p>
+            <p style="font-size:14px;color:#666;margin:0 0 1.5rem;line-height:1.7;">
+              استخدم الكود التالي لتأكيد حسابك.<br>الكود صالح لمدة <strong>دقيقة واحدة</strong> فقط.
+            </p>
+
+            <div style="background:#FDF1EE;border-radius:12px;padding:1.25rem;display:inline-block;margin-bottom:1.5rem;">
+              <div style="font-size:13px;color:#993C1D;margin-bottom:6px;font-weight:bold;">كود التحقق</div>
+              <div style="font-size:36px;font-weight:bold;color:#E8502A;letter-spacing:10px;">${otp}</div>
+            </div>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:1.5rem;">
+              <tr>
+                <td align="center" style="padding:0 8px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:#FDF1EE;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:20px;">⏱️</div>
+                  <div style="font-size:12px;color:#888;">صالح دقيقة</div>
+                </td>
+                <td align="center" style="padding:0 8px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:#FDF1EE;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:20px;">🔒</div>
+                  <div style="font-size:12px;color:#888;">كود سري</div>
+                </td>
+                <td align="center" style="padding:0 8px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:#FDF1EE;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:20px;">🛵</div>
+                  <div style="font-size:12px;color:#888;">توصيل سريع</div>
+                </td>
+              </tr>
+            </table>
+
+            <p style="font-size:12px;color:#999;line-height:1.7;margin:0;">
+              إذا لم تطلب هذا الكود، يمكنك تجاهل هذا الإيميل بأمان.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="border-top:1px solid #eee;padding:1rem 2rem;text-align:center;">
+            <span style="font-size:12px;color:#999;">📍 أكلي — أفضل مطاعم حواليك لحد الباب</span>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
   });
 
-  await transporter.sendMail({
-    from: '"My Shop" <yassefsea274@gmail.com>',
-    to,
-    subject: "Email Verification",
-    text: `Your OTP is: ${OTP}`,
-  });
-}
-
+  if (error) throw new Error(error.message);
+};
+ 
 const sendOTPEmail = async (req, res) => {
   try {
     const { email, phone } = req.body;
-
+ 
     if (!email || !phone) {
       return res.status(400).json({ error: "Email and phone are required" });
     }
-
+ 
     const { rows: existing } = await data.query(
       "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
-
+ 
     if (existing.length > 0) {
       return res.status(409).json({ error: "Email or phone already exists" });
     }
-
+ 
     const otp = crypto.randomInt(100000, 999999).toString();
-    otpCache.set(email, otp);
-
-    res.status(200).json({ message: "OTP sent to your email successfully" });
-
-    sendEmail(email, otp)
-      .then(() => {
-        console.log(`OTP ${otp} sent to email: ${email}`);
-      })
-      .catch(err => {
-        console.error("Email sending failed:", err);
-      });
-
+ 
+    await sendEmail(email, otp);
+    console.log(`OTP ${otp} sent to email: ${email}`);
+ 
+    const otpToken = jwt.sign(
+      { email, otp },
+      process.env.JWT_SECRET,
+      { expiresIn: "1m" }
+    );
+ 
+    return res.status(200).json({
+      message: "OTP sent to your email successfully",
+      otpToken, 
+    });
   } catch (err) {
     console.error("Send OTP Error:", err);
     return res.status(500).json({ error: "Failed to send OTP" });
   }
 };
-
+ 
 const signupForCustomer = async (req, res) => {
   try {
-    const { name, email, password, role, phone, otp } = req.body;
-
-    if (!name || !email || !password || !phone || !otp) {
+    const { name, email, password, role, phone, otp, otpToken } = req.body;
+ 
+    if (!name || !email || !password || !phone || !otp || !otpToken) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-
-    if (role === "restaurant") {
+ 
+    if (role === "restaurant" || (role !== "customer" && role !== "admin")) {
       return res.status(400).json({ error: "Invalid role" });
     }
-
-    if (role !== "customer" && role !== "admin") {
-      return res.status(400).json({ error: "Invalid role" });
+ 
+    let decoded;
+    try {
+      decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(400).json({ error: "OTP expired or invalid token" });
     }
-
-    const storedOtp = otpCache.get(email);
-    if (!storedOtp || storedOtp !== otp) {
-      return res.status(400).json({ error: "Invalid or expired OTP" });
+ 
+    if (decoded.email !== email || decoded.otp !== otp) {
+      return res.status(400).json({ error: "Invalid OTP" });
     }
-
-    otpCache.del(email);
-
+ 
     const { rows: userExists } = await data.query(
       "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
-
+ 
     if (userExists.length > 0) {
       return res.status(409).json({ error: "Email or phone already exists" });
     }
-
+ 
     const hashPassword = await bcryptJs.hash(password, 11);
-
+ 
     await data.query(
       "INSERT INTO users (name, email, password, role, phone) VALUES ($1, $2, $3, $4, $5)",
       [name, email, hashPassword, role, phone]
     );
-
+ 
     return res.status(201).json({
       message: "User registered successfully",
       user: { name, email, phone, role },
@@ -110,6 +166,7 @@ const signupForCustomer = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 const loginForCustomer = async (req, res) => {
   try {

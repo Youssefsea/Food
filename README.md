@@ -1,1164 +1,488 @@
-
-# 🍕 Food Delivery Backend API
-
 <div align="center">
 
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white)
-![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)
+# 🍔 Food Delivery App
 
-**A complete RESTful API for a Food Delivery Platform** 
+### منصة توصيل الطعام المتكاملة
 
-[Features](#-features) •
-[Installation](#-installation) •
-[API Documentation](#-api-documentation) •
-[Database Schema](#-database-schema)
+[![Next.js](https://img.shields.io/badge/Next.js-16.1.4-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Client-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
+
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----------------------------------------------------" />
+
+**تطبيق متكامل لتوصيل الطعام يربط بين العملاء والمطاعم بتجربة سلسة وحديثة**
+
+[🚀 البدء السريع](#-البدء-السريع) •
+[✨ المميزات](#-المميزات) •
+[📱 الصفحات](#-الصفحات) •
+[🛠️ التقنيات](#️-التقنيات)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## 📋 نظرة عامة
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Environment Variables](#-environment-variables)
-- [API Documentation](#-api-documentation)
-  - [Authentication](#authentication)
-  - [Customer Endpoints](#customer-endpoints)
-  - [Restaurant Endpoints](#restaurant-endpoints)
-  - [Admin Endpoints](#admin-endpoints)
-- [Database Schema](#-database-schema)
-- [Security](#-security)
-- [Contributing](#-contributing)
+تطبيق **Food Delivery** هو منصة متكاملة لتوصيل الطعام مبنية بأحدث التقنيات. يوفر التطبيق واجهتين رئيسيتين:
+
+- 🛒 **واجهة العملاء**: لتصفح المطاعم، إضافة الأطباق للسلة، إتمام الطلبات، والتواصل المباشر مع المطاعم
+- 🏪 **لوحة تحكم البائعين**: لإدارة المطعم، الأطباق، الطلبات، والرد على رسائل العملاء
 
 ---
 
-## 🌟 Overview
+## ✨ المميزات
 
-This is a comprehensive backend API for a **Food Delivery Platform** that connects customers with restaurants. The system supports:
+<table>
+<tr>
+<td width="50%">
 
-- 👤 **Customers** - Browse restaurants, add dishes to cart, place orders, and make payments
-- 🍽️ **Restaurants** - Manage menu, handle orders, view dashboard statistics
-- 👨‍💼 **Admins** - Confirm payments and manage the platform
+### 👤 للعملاء
+- 🔍 **استكشاف المطاعم** مع فلاتر متقدمة
+- 🗺️ **تحديد الموقع بالـ GPS** مع حساب المسافة
+- 🛒 **سلة ذكية** تدعم مطاعم متعددة
+- 💳 **نظام دفع مرن** (فودافون كاش / إنستاباي)
+- 📷 **رفع إثبات الدفع** مع معاينة الصورة
+- 📅 **حجز مسبق** للمطاعم
+- 💬 **محادثة فورية** مع المطعم عن طريق الطلب
 
-The API features **geospatial queries** for finding nearby restaurants based on delivery zones, **real-time order tracking**, and **secure payment processing** with proof uploads.
+</td>
+<td width="50%">
 
----
+### 🏪 للبائعين
+- 📊 **لوحة تحكم شاملة** مع إحصائيات
+- 🍽️ **إدارة الأطباق** (إضافة/تعديل/حذف)
+- 📦 **إدارة الطلبات** مع تتبع الحالات
+- ⚙️ **إعدادات المطعم** والموقع
+- 🔔 **إشعارات فورية** للطلبات الجديدة
+- 📈 **إحصائيات المبيعات** والأطباق الأكثر مبيعاً
+- 💬 **محادثة فورية** مع العملاء
 
-## ✨ Features
+</td>
+</tr>
+</table>
 
-### For Customers
-- 📝 **Account Management** - Sign up, login, profile management
-- 🔍 **Restaurant Discovery** - Find nearby restaurants based on location (GIS/Polygon-based)
-- 🛒 **Shopping Cart** - Add, update, remove dishes from cart
-- 📦 **Order Placement** - Place orders with delivery or reservation
-- 💳 **Payment System** - Upload payment proof (Vodafone Cash / InstaPay)
-- 📍 **Location-based Delivery** - Smart delivery fee calculation based on distance
-
-### For Restaurants
-- 🏪 **Restaurant Profile** - Complete profile management with delivery zones
-- 🍕 **Menu Management** - Add, edit, delete dishes with multiple images
-- 📊 **Dashboard Analytics** - Real-time statistics (revenue, orders, top dishes)
-- 📋 **Order Management** - View and update order statuses
-- ⏰ **Working Hours** - Set open/close times
-- 🚗 **Delivery Settings** - Configure delivery radius and fees
-
-### For Admins
-- ✅ **Payment Confirmation** - Review and confirm payment proofs
-- 📈 **Platform Overview** - Monitor all activities
-
-### Technical Features
-- 🔐 **JWT Authentication** - Secure token-based authentication
-- 🍪 **HTTP-Only Cookies** - Secure session management
-- � **Safari/iOS Support** - Token fallback via Authorization header for mobile browsers
-- 📸 **Image Upload** - Cloudinary integration for images
-- 🗺️ **Geospatial Queries** - MySQL spatial functions for delivery zones
-- 🔄 **Transaction Support** - Database transactions for data integrity
-- 🛡️ **Role-Based Access** - Customer, Restaurant, Admin roles with middleware protection
+### 🌟 مميزات تقنية
+- ⚡ **أداء فائق** مع Next.js 16 App Router
+- 🎨 **تصميم عصري** متجاوب مع جميع الشاشات
+- 🌙 **RTL Support** دعم كامل للغة العربية
+- 🗺️ **خرائط تفاعلية** مع Leaflet
+- ✨ **انيميشن سلس** مع Framer Motion
+- 🔒 **مصادقة آمنة** مع JWT
+- ⚡ **محادثة لحظية** مع Socket.IO
 
 ---
 
-## 🛠️ Tech Stack
+## 📱 الصفحات
 
-| Technology | Purpose |
-|------------|---------|
-| **Node.js** | Runtime environment |
-| **Express.js** | Web framework |
-| **MySQL** | Database with spatial support |
-| **JWT** | Authentication |
-| **bcryptjs** | Password hashing |
-| **Cloudinary** | Image storage & CDN |
-| **Multer** | File upload handling |
-| **CORS** | Cross-origin resource sharing |
-| **Cookie Parser** | Cookie handling |
+### 🛒 واجهة العملاء
 
----
+| الصفحة | المسار | الوصف |
+|--------|--------|-------|
+| 🏠 **الاستكشاف** | `/explore` | تصفح المطاعم مع البحث والفلاتر |
+| 🍽️ **المطعم** | `/restaurant/[name]` | عرض قائمة الأطباق مع التفاصيل |
+| 🛒 **السلة** | `/cart` | إدارة السلة وإتمام الطلب |
+| 🔐 **تسجيل الدخول** | `/login` | صفحة تسجيل الدخول |
+| 📝 **إنشاء حساب** | `/signup` | التسجيل كعميل أو بائع |
+| 💬 **المحادثات** | `/customer/chat` | قائمة محادثات الطلبات |
 
-## 📁 Project Structure
+### 🏪 لوحة تحكم البائعين
 
-```
-Food-back-nod/
-├── 📄 start.js              # Application entry point
-├── 📄 router.js             # Route definitions
-├── 📄 package.json          # Dependencies
-├── 📄 .env                  # Environment variables
-│
-├── 📂 Customers/            # Customer-related modules
-│   ├── authForCustomers.js  # Auth (signup, login, profile)
-│   ├── orders.js            # Cart & order management
-│   └── payments.js          # Payment processing
-│
-├── 📂 restaurantServes/     # Restaurant-related modules
-│   ├── authForRestaurant.js # Auth, profile, dashboard
-│   └── Dishes.js            # Menu management
-│
-├── 📂 middleware/           # Middleware functions
-│   ├── jwtmake.js           # JWT token creation
-│   ├── vaildJwt.js          # Token validation & role verification
-│   └── muilter.js           # File upload configuration
-│
-└── 📂 data/                 # Data layer
-    ├── data.js              # Database connection (MySQL)
-    └── cloudTheImg.js       # Cloudinary configuration
-```
+| الصفحة | المسار | الوصف |
+|--------|--------|-------|
+| 📊 **لوحة التحكم** | `/vendor/dashboard` | الإحصائيات والنظرة العامة |
+| 🍽️ **الأطباق** | `/vendor/dishes` | إدارة قائمة الأطباق |
+| 📦 **الطلبات** | `/vendor/orders` | إدارة ومتابعة الطلبات |
+| ⚙️ **الإعدادات** | `/vendor/EditAtVendorInfo` | إعدادات المطعم والحساب |
+| 💬 **المحادثات** | `/vendor/chat` | قائمة محادثات العملاء |
 
 ---
 
-## 🚀 Installation
+## 🛠️ التقنيات
 
-### Prerequisites
+<div align="center">
 
-- Node.js (v18 or higher)
-- MySQL Server
-- Cloudinary Account
+| التقنية | الإصدار | الاستخدام |
+|---------|---------|-----------|
+| ![Next.js](https://img.shields.io/badge/-Next.js-000000?style=flat-square&logo=next.js) | 16.1.4 | إطار العمل الرئيسي |
+| ![React](https://img.shields.io/badge/-React-61DAFB?style=flat-square&logo=react&logoColor=black) | 19.2.3 | مكتبة واجهات المستخدم |
+| ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) | 5.x | Type Safety |
+| ![Tailwind CSS](https://img.shields.io/badge/-Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) | 4.x | التصميم والتنسيق |
+| ![Framer Motion](https://img.shields.io/badge/-Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white) | 12.x | الانيميشن |
+| ![Leaflet](https://img.shields.io/badge/-Leaflet-199900?style=flat-square&logo=leaflet&logoColor=white) | 1.9.4 | الخرائط التفاعلية |
+| ![Socket.io](https://img.shields.io/badge/-Socket.io_Client-010101?style=flat-square&logo=socket.io&logoColor=white) | Latest | المحادثة الفورية |
+| ![Lucide](https://img.shields.io/badge/-Lucide_Icons-F56565?style=flat-square) | 0.563 | الأيقونات |
 
-### Steps
+</div>
 
-1. **Clone the repository**
+---
+
+## 🚀 البدء السريع
+
+### المتطلبات
+
+- **Node.js** >= 18.0.0
+- **npm** أو **yarn** أو **pnpm**
+
+### التثبيت
+
 ```bash
-git clone https://github.com/yourusername/food-delivery-api.git
-cd food-delivery-api
-```
+# 1️⃣ استنساخ المشروع
+git clone https://github.com/Youssefsea/Food_front.git
 
-2. **Install dependencies**
-```bash
+# 2️⃣ الانتقال للمجلد
+cd Food_front/frontend
+
+# 3️⃣ تثبيت المكتبات
 npm install
+
+# 4️⃣ تشغيل التطبيق
+npm run dev
 ```
 
-3. **Set up environment variables**
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+التطبيق سيعمل على: **http://localhost:3000**
 
-4. **Set up the database**
-```sql
--- Create database
-CREATE DATABASE food_delivery;
+### 🔧 إعداد البيئة
 
--- Run the schema (see Database Schema section)
-```
-
-5. **Start the server**
-```bash
-node start.js
-```
-
-The server will run at `http://localhost:3444`
-
----
-
-## ⚙️ Environment Variables
-
-Create a `.env` file in the root directory:
+أنشئ ملف `.env.local`:
 
 ```env
-# Database Configuration
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=food_delivery
-
-# JWT Configuration
-JWT_SECRET=your_super_secret_jwt_key
-JWT_EXPIRES_IN=24h
-
-# Cloudinary Configuration
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-
-# Server Configuration
-PORT=3444
-NODE_ENV=development
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://localhost:3444
 ```
 
 ---
 
-## 📚 API Documentation
+## 📁 هيكل المشروع
 
-### Base URL
 ```
-http://localhost:3444
-```
-
-### Response Format
-All responses follow this format:
-```json
-{
-  "message": "Success message",
-  "data": { }
-}
-```
-
-Error Response:
-```json
-{
-  "error": "Error message"
-}
-```
-
----
-
-## Authentication
-
-### Customer Signup
-```http
-POST /customer/signup
-```
-
-**Request Body:**
-```json
-{
-  "name": "Ahmed Mohamed",
-  "email": "ahmed@example.com",
-  "password": "securePassword123",
-  "phone": "01012345678",
-  "role": "customer"
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "message": "User registered successfully"
-}
-```
-
----
-
-### Customer Login
-```http
-POST /customer/login
-```
-
-**Request Body:**
-```json
-{
-  "email": "ahmed@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "message": "Login successful",
-  "user": {
-    "id": 1,
-    "name": "Ahmed Mohamed",
-    "email": "ahmed@example.com",
-    "role": "customer",
-    "phone": "01012345678",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
+frontend/
+├── 📂 app/                          # Next.js App Router
+│   ├── 📄 layout.tsx                # التخطيط الرئيسي
+│   ├── 📄 page.tsx                  # الصفحة الرئيسية
+│   ├── 📄 globals.css               # الأنماط العامة
+│   │
+│   ├── 📂 cart/                     # 🛒 صفحة السلة
+│   │   ├── 📄 page.tsx
+│   │   ├── 📄 types.ts
+│   │   └── 📂 components/
+│   │       ├── CartHeader.tsx
+│   │       ├── CheckoutButton.tsx
+│   │       ├── DeliveryLocation.tsx
+│   │       ├── DishItem.tsx
+│   │       ├── LocationPickerModal.tsx
+│   │       ├── OrderSummary.tsx
+│   │       ├── PaymentMethod.tsx
+│   │       ├── PaymentProofUpload.tsx
+│   │       └── RestaurantSelector.tsx
+│   │
+│   ├── 📂 explore/                  # 🔍 استكشاف المطاعم
+│   │   ├── 📄 page.tsx
+│   │   └── 📂 componentForExplore/
+│   │       ├── Header.tsx
+│   │       ├── SearchBar.tsx
+│   │       ├── FilterChips.tsx
+│   │       ├── RestaurantCard.tsx
+│   │       └── BottomNavigation.tsx
+│   │
+│   ├── 📂 restaurant/               # 🍽️ صفحة المطعم
+│   │   └── 📂 [restaurant_name]/
+│   │       ├── 📄 page.tsx
+│   │       └── 📂 components/
+│   │           ├── CategoryTabs.tsx
+│   │           ├── DishCard.tsx
+│   │           ├── DishDetailModal.tsx
+│   │           └── FloatingCartBar.tsx
+│   │
+│   ├── 📂 vendor/                   # 🏪 لوحة تحكم البائعين
+│   │   ├── 📂 dashboard/
+│   │   │   ├── 📄 page.tsx
+│   │   │   └── 📂 components/
+│   │   │       ├── DashboardHeader.tsx
+│   │   │       ├── Sidebar.tsx
+│   │   │       ├── StatsCards.tsx
+│   │   │       ├── RecentOrdersTable.tsx
+│   │   │       └── TopSellingDishes.tsx
+│   │   │
+│   │   ├── 📂 dishes/               # إدارة الأطباق
+│   │   ├── 📂 orders/               # إدارة الطلبات
+│   │   ├── 📂 chat/                 # 💬 محادثات العملاء
+│   │   └── 📂 EditAtVendorInfo/     # الإعدادات
+│   │
+│   ├── 📂 login/                    # 🔐 تسجيل الدخول
+│   ├── 📂 signup/                   # 📝 إنشاء حساب
+│   │   ├── 📂 customer/
+│   │   └── 📂 vendor/
+│   │
+│   └── 📂 customer/
+│       └── 📂 chat/                 # 💬 محادثات العميل
+│
+├── 📄 axios.js                      # إعداد Axios
+├── 📄 package.json
+├── 📄 tsconfig.json
+├── 📄 tailwind.config.ts
+└── 📄 next.config.ts
 ```
 
 ---
 
-### Restaurant Signup
-```http
-POST /restaurant/signup
-```
+## 🔌 API Endpoints
 
-**Request Body:**
-```json
-{
-  "name": "Pizza House",
-  "email": "pizza@restaurant.com",
-  "password": "securePassword123",
-  "phone": "01098765432",
-  "description": "Best pizza in town",
-  "location": "123 Main Street, Cairo",
-  "allowed_radius_km": 15,
-  "open_time": "10:00:00",
-  "close_time": "23:00:00",
-  "area_name": "Cairo Downtown",
-  "can_deliver": true,
-  "can_reserve": true,
-  "delivery_area": [
-    [31.2357, 30.0444],
-    [31.2400, 30.0500],
-    [31.2300, 30.0550],
-    [31.2357, 30.0444]
-  ]
-}
-```
+### 👤 العملاء
 
-> 📍 **Note:** `delivery_area` is an array of coordinates forming a polygon that defines the restaurant's delivery zone.
+| Method | Endpoint | الوصف |
+|--------|----------|-------|
+| `POST` | `/customer/login` | تسجيل الدخول |
+| `POST` | `/customer/signup` | إنشاء حساب جديد |
+| `GET` | `/restaurant/all` | جلب جميع المطاعم |
+| `POST` | `/customer/nearest-restaurants` | المطاعم القريبة بالموقع |
+| `GET` | `/customer/view-cart` | عرض السلة |
+| `POST` | `/customer/add-dish-to-cart` | إضافة للسلة |
+| `PUT` | `/customer/update-dish-quantity-in-cart` | تعديل الكمية |
+| `DELETE` | `/customer/remove-dish-from-cart` | حذف من السلة |
+| `POST` | `/customer/place-order` | إنشاء طلب |
+| `POST` | `/customer/upload-payment-proof` | رفع إثبات الدفع |
+| `POST` | `/customer/payment-status` | متابعة حالة الدفع |
+| `GET` | `/customer/chat-rooms` | جلب غرف المحادثة |
+| `GET` | `/customer/chat-room/order/:orderId` | غرفة محادثة طلب معين |
+| `GET` | `/customer/chat-messages/:roomId` | رسائل غرفة محادثة |
 
----
+### 🏪 البائعين
 
-### Restaurant Login
-```http
-POST /restaurant/login
-```
-
-**Request Body:**
-```json
-{
-  "email": "pizza@restaurant.com",
-  "password": "securePassword123"
-}
-```
+| Method | Endpoint | الوصف |
+|--------|----------|-------|
+| `POST` | `/restaurant/login` | تسجيل الدخول |
+| `GET` | `/restaurant/dashboard` | بيانات لوحة التحكم |
+| `GET` | `/restaurant/profile` | بيانات المطعم |
+| `PUT` | `/restaurant/change-info` | تعديل بيانات المطعم |
+| `GET` | `/restaurant/dishes` | جلب الأطباق |
+| `POST` | `/restaurant/add-dish` | إضافة طبق |
+| `PUT` | `/restaurant/change-dish` | تعديل طبق |
+| `DELETE` | `/restaurant/delete-dish` | حذف طبق |
+| `GET` | `/restaurant/orders` | جلب الطلبات |
+| `POST` | `/restaurant/order-status` | تحديث حالة الطلب |
+| `GET` | `/restaurant/chat-rooms` | جلب غرف المحادثة |
+| `GET` | `/restaurant/chat-room/order/:orderId` | غرفة محادثة طلب معين |
+| `GET` | `/restaurant/chat-messages/:roomId` | رسائل غرفة محادثة |
 
 ---
 
-## Customer Endpoints
+## ⚡ Real-Time Chat (Socket.IO)
 
-### 🔐 All customer endpoints require authentication
-Add header: `Authorization: Bearer <token>`
+التطبيق يستخدم **Socket.IO** للمحادثة الفورية بين العملاء والمطاعم، وكل غرفة محادثة مرتبطة بطلب معين.
 
----
+### الاتصال
 
-### Get Profile
-```http
-GET /customer/profile
-```
+```typescript
+import { io, Socket } from "socket.io-client";
 
-**Response:** `200 OK`
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Ahmed Mohamed",
-    "email": "ahmed@example.com",
-    "phone": "01012345678"
-  }
-}
-```
-
----
-
-### Update Profile
-```http
-PUT /customer/change-info
-```
-
-**Request Body:**
-```json
-{
-  "name": "Ahmed Ali",
-  "phone": "01111111111"
-}
-```
-
----
-
-### Find Nearby Restaurants
-```http
-POST /customer/nearest-restaurants
-```
-
-**Request Body:**
-```json
-{
-  "lat": 30.0444,
-  "lng": 31.2357
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "count": 3,
-  "nearby_restaurants": [
-    {
-      "id": 1,
-      "restaurant_id": 1,
-      "area_id": 1,
-      "description": "Best pizza in town",
-      "location": "123 Main Street"
-    }
-  ]
-}
-```
-
----
-
-### Get All Restaurants
-```http
-GET /restaurant/all
-```
-
-**Response:** `200 OK`
-```json
-{
-  "restaurants": [
-    {
-      "id": 1,
-      "description": "Best pizza in town",
-      "location": "123 Main Street",
-      "can_deliver": true,
-      "can_reserve": true
-    }
-  ]
-}
-```
-
----
-
-### Get Restaurant Dishes
-```http
-POST /restaurant/all-dishes-for-restaurantE
-```
-
-**Request Body:**
-```json
-{
-  "restaurantId": 1
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "dishes": [
-    {
-      "id": 1,
-      "name": "Margherita Pizza",
-      "description": "Classic Italian pizza",
-      "price": 85.00,
-      "image": "https://cloudinary.com/...",
-      "category": "pizza",
-      "is_available": true,
-      "preparation_time": 20
-    }
-  ]
-}
-```
-
----
-
-### Add Dish to Cart
-```http
-POST /customer/add-dish-to-cart
-```
-
-**Request Body:**
-```json
-{
-  "dishId": 1,
-  "quantity": 2
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "message": "Dish added to cart successfully"
-}
-```
-
----
-
-### View Cart
-```http
-GET /customer/view-cart
-```
-
-**Response:** `200 OK`
-```json
-{
-  "cartItems": [
-    {
-      "dishId": 1,
-      "quantity": 2,
-      "name": "Margherita Pizza",
-      "description": "Classic Italian pizza",
-      "price": 85.00
-    }
-  ]
-}
-```
-
----
-
-### Remove Dish from Cart
-```http
-DELETE /customer/remove-dish-from-cart
-```
-
-**Request Body:**
-```json
-{
-  "dishId": 1
-}
-```
-
----
-
-### Place Order
-```http
-POST /customer/place-order
-```
-
-**Request Body:**
-```json
-{
-  "location": "456 Customer Street, Cairo",
-  "lat": 30.0500,
-  "lng": 31.2400,
-  "is_reservation": false,
-  "reservation_date": null
-}
-```
-
-**Response:** `201 Created`
-```json
-{
-  "message": "Order processing completed",
-  "createdOrders": [
-    {
-      "orderId": 1,
-      "restaurantId": 1,
-      "totalAmount": 185.50,
-      "deliveryFee": 15.50
-    }
-  ],
-  "failedOrders": []
-}
-```
-
-> 🚗 **Delivery Fee Calculation:** 
-> - Calculates distance from restaurant to customer
-> - Checks if within allowed radius
-> - Applies per-km delivery fee
-
----
-
-### Upload Payment Proof
-```http
-POST /customer/upload-payment-proof
-Content-Type: multipart/form-data
-```
-
-**Form Data:**
-- `orderId`: 1
-- `payment_method`: "vodafone_cash" | "instapay"
-- `images`: [payment screenshot file]
-
-**Response:** `201 Created`
-```json
-{
-  "success": true,
-  "message": "Payment proof uploaded successfully. Waiting for confirmation.",
-  "data": {
-    "paymentId": 1,
-    "order_id": 1,
-    "amount": 185.50,
-    "paymentMethod": "vodafone_cash",
-    "payment_proof": "https://cloudinary.com/...",
-    "status": "pending"
-  }
-}
-```
-
----
-
-### Check Payment Status
-```http
-POST /customer/payment-status
-```
-
-**Request Body:**
-```json
-{
-  "orderId": 1
-}
-```
-
----
-
-## Restaurant Endpoints
-
-### 🔐 All restaurant endpoints require authentication
-Add header: `Authorization: Bearer <token>`
-
----
-
-### Get Restaurant Profile
-```http
-GET /restaurant/profile
-```
-
-**Response:** `200 OK`
-```json
-{
-  "restaurantProfile": {
-    "name": "Pizza House",
-    "email": "pizza@restaurant.com",
-    "phone": "01098765432",
-    "description": "Best pizza in town",
-    "location": "123 Main Street",
-    "allowed_radius_km": 15,
-    "open_time": "10:00:00",
-    "close_time": "23:00:00",
-    "delivery_fees": 5.00
-  },
-  "dishes": [...]
-}
-```
-
----
-
-### Update Restaurant Info
-```http
-PUT /restaurant/change-info
-```
-
-**Request Body:**
-```json
-{
-  "name": "Pizza House Premium",
-  "email": "contact@pizzahouse.com",
-  "phone": "01098765432",
-  "description": "Updated description",
-  "location": "New Address",
-  "allowed_radius_km": 20,
-  "open_time": "09:00:00",
-  "close_time": "00:00:00",
-  "delivery_fees": 7.00
-}
-```
-
----
-
-### Toggle Restaurant Open/Closed
-```http
-GET /restaurant/is-open
-```
-
-**Response:** `200 OK`
-```json
-{
-  "message": "Restaurant status updated successfully",
-  "is_open": 1
-}
-```
-
----
-
-### Add New Dish
-```http
-POST /restaurant/add-dish
-Content-Type: multipart/form-data
-```
-
-**Form Data:**
-- `name`: "Pepperoni Pizza"
-- `description`: "Spicy pepperoni with cheese"
-- `price`: 95
-- `preparation_time`: 25
-- `category`: "pizza"
-- `images`: [up to 5 image files]
-
-**Response:** `201 Created`
-```json
-{
-  "message": "Dish added successfully"
-}
-```
-
----
-
-### Update Dish
-```http
-PUT /restaurant/change-dish
-```
-
-**Request Body:**
-```json
-{
-  "dishId": 1,
-  "name": "Updated Pizza Name",
-  "description": "Updated description",
-  "price": 100,
-  "preparation_time": 30,
-  "category": "pizza"
-}
-```
-
----
-
-### Change Dish Availability
-```http
-PUT /restaurant/change-dish-availability
-```
-
-**Request Body:**
-```json
-{
-  "dishId": 1,
-  "is_available": false
-}
-```
-
----
-
-### Delete Dish
-```http
-DELETE /restaurant/delete-dish
-```
-
-**Request Body:**
-```json
-{
-  "dishId": 1
-}
-```
-
----
-
-### Get Dashboard Statistics
-```http
-GET /restaurant/dashboard
-```
-
-**Response:** `200 OK`
-```json
-{
-  "restaurant": {
-    "id": 1,
-    "name": "Pizza House",
-    "is_open": true,
-    ...
-  },
-  "stats": {
-    "dishes": {
-      "total": 25,
-      "available": 20
-    },
-    "orders": {
-      "today": 45,
-      "pending": 8,
-      "total": 1250
-    },
-    "revenue": {
-      "today": 3500.00,
-      "total": 125000.00
-    }
-  },
-  "recentOrders": [...],
-  "topDishes": [...]
-}
-```
-
----
-
-### Get Restaurant Orders
-```http
-GET /restaurant/orders?status=pending&limit=50&offset=0
-```
-
-**Query Parameters:**
-- `status` (optional): Filter by status (pending, paid, cooking, delivering, completed, cancelled)
-- `limit` (optional): Number of results (default: 50)
-- `offset` (optional): Pagination offset (default: 0)
-
-**Response:** `200 OK`
-```json
-{
-  "orders": [
-    {
-      "id": 1,
-      "total_amount": 185.50,
-      "delivery_fee": 15.50,
-      "status": "pending",
-      "is_reservation": false,
-      "location": "Customer address",
-      "created_at": "2026-01-31T10:30:00Z",
-      "customer_name": "Ahmed Mohamed",
-      "customer_phone": "01012345678",
-      "items": [
-        {
-          "dish_id": 1,
-          "dish_name": "Margherita Pizza",
-          "quantity": 2,
-          "price": 85.00
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-### Update Order Status
-```http
-POST /restaurant/order-status
-```
-
-**Request Body:**
-```json
-{
-  "orderId": 1,
-  "status": "cooking"
-}
-```
-
-**Valid Status Values:**
-- `pending` - Order received
-- `paid` - Payment confirmed
-- `cooking` - Being prepared
-- `delivering` - Out for delivery
-- `completed` - Delivered
-- `cancelled` - Order cancelled
-
----
-
-## Admin Endpoints
-
-### 🔐 Requires admin authentication
-
----
-
-### Confirm Payment
-```http
-POST /admin/confirmPayment
-```
-
-**Request Body:**
-```json
-{
-  "paymentId": 1,
-  "status": "approved"
-}
-```
-
----
-
-## 🗄️ Database Schema
-
-### Users Table
-```sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) UNIQUE NOT NULL,
-    role ENUM('customer', 'restaurant', 'admin') NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Restaurant Profiles Table
-```sql
-CREATE TABLE restaurant_profiles (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    description TEXT,
-    location VARCHAR(500),
-    allowed_radius_km DECIMAL(5,2) DEFAULT 10,
-    open_time TIME,
-    close_time TIME,
-    is_open BOOLEAN DEFAULT TRUE,
-    delivery_fees DECIMAL(10,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-```
-
-### Restaurant Delivery Areas Table
-```sql
-CREATE TABLE restaurant_delivery_areas (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    restaurant_id INT NOT NULL,
-    area_name VARCHAR(255),
-    can_deliver BOOLEAN DEFAULT TRUE,
-    can_reserve BOOLEAN DEFAULT FALSE,
-    delivery_area POLYGON NOT NULL SRID 4326,
-    FOREIGN KEY (restaurant_id) REFERENCES restaurant_profiles(id) ON DELETE CASCADE,
-    SPATIAL INDEX (delivery_area)
-);
-```
-
-### Dishes Table
-```sql
-CREATE TABLE dishes (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    restaurant_id INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL,
-    image TEXT,
-    category VARCHAR(100),
-    preparation_time INT DEFAULT 20,
-    is_available BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (restaurant_id) REFERENCES restaurant_profiles(id) ON DELETE CASCADE
-);
-```
-
-### Carts Table
-```sql
-CREATE TABLE carts (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-```
-
-### Cart Items Table
-```sql
-CREATE TABLE cart_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    cart_id INT NOT NULL,
-    dish_id INT NOT NULL,
-    quantity INT DEFAULT 1,
-    FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
-    FOREIGN KEY (dish_id) REFERENCES dishes(id) ON DELETE CASCADE
-);
-```
-
-### Orders Table
-```sql
-CREATE TABLE orders (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    restaurant_id INT NOT NULL,
-    payment_id INT,
-    total_amount DECIMAL(10,2) NOT NULL,
-    delivery_fee DECIMAL(10,2) DEFAULT 0,
-    status ENUM('pending', 'paid', 'cooking', 'delivering', 'completed', 'cancelled') DEFAULT 'pending',
-    location VARCHAR(500),
-    is_reservation BOOLEAN DEFAULT FALSE,
-    reservation_date DATETIME,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (restaurant_id) REFERENCES restaurant_profiles(id),
-    FOREIGN KEY (payment_id) REFERENCES payments(id)
-);
-```
-
-### Order Items Table
-```sql
-CREATE TABLE order_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
-    dish_id INT NOT NULL,
-    quantity INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (dish_id) REFERENCES dishes(id)
-);
-```
-
-### Payments Table
-```sql
-CREATE TABLE payments (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    payment_method ENUM('vodafone_cash', 'instapay') NOT NULL,
-    payment_proof VARCHAR(500),
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-    confirmed_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id)
-);
-```
-
----
-
-## 🔐 Security
-
-### Authentication
-- **JWT Tokens** - Secure, stateless authentication
-- **HTTP-Only Cookies** - Prevents XSS attacks
-- **Authorization Header Fallback** - Supports `Bearer` token for Safari/iOS compatibility
-- **Token Expiration** - 2-hour validity
-- **Minimal JWT Payload** - Only essential data (id, name, email, role) for security
-
-### Token Handling
-The API supports dual authentication methods for maximum compatibility:
-
-```javascript
-// Backend automatically checks both:
-const token = req.cookies?.token || req.headers['authorization']?.split(' ')[1];
-```
-
-**Why?** Safari on iOS has strict cookie policies (ITP) that may block cookies. The Authorization header works as a fallback.
-
-**Frontend Implementation:**
-```javascript
-// Axios interceptor for automatic token handling
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('customerToken') || localStorage.getItem('vendorToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+const socket: Socket = io(process.env.NEXT_PUBLIC_API_URL!, {
+  auth: { token: localStorage.getItem("customerToken") },
 });
 ```
 
-### Password Security
-- **bcryptjs** - Industry-standard password hashing
-- **Salt Rounds: 11** - Strong hashing complexity
-
-### API Security
-- **CORS Configuration** - Controlled cross-origin access
-- **Role-Based Access Control** - Separate middleware for each role
-- **Input Validation** - Request body validation
-
-### Role-Based Middleware
-
-Protect routes based on user type:
-
-```javascript
-// Restaurant-only routes
-router.get('/dashboard', sureToken, restaurantOnly, getDashboard);
-router.post('/add-dish', sureToken, restaurantOnly, addDish);
-
-// Customer-only routes  
-router.post('/place-order', sureToken, customerOnly, placeOrder);
-router.get('/view-cart', sureToken, customerOnly, viewCart);
-
-// Admin-only routes
-router.post('/confirmPayment', sureToken, adminOnly, confirmPayment);
-```
-
-**Available Middleware:**
-| Middleware | Purpose |
-|------------|----------|
-| `sureToken` | Validates JWT token |
-| `customerOnly` | Restricts to customers |
-| `restaurantOnly` | Restricts to restaurants |
-| `adminOnly` | Restricts to admins |
-| `verifyRoleForRestaurant` | Validates restaurant profile exists |
-| `verifyResturntAreActive` | Checks if restaurant is verified |
-
-### Data Protection
-- **Parameterized Queries** - SQL injection prevention
-- **Transaction Support** - Data integrity for critical operations
+> 🔐 **المصادقة:** يتم التحقق من الـ JWT عند الاتصال، ويدعم السيرفر إرسال التوكن عن طريق `auth.token`، الـ `Authorization` header، أو الـ cookie.
 
 ---
 
-## 🔧 Error Handling
+### Socket Events
 
-| Status Code | Meaning |
-|-------------|---------|
-| `200` | Success |
-| `201` | Created |
-| `400` | Bad Request - Invalid input |
-| `401` | Unauthorized - Missing/invalid token |
-| `403` | Forbidden - Insufficient permissions |
-| `404` | Not Found - Resource doesn't exist |
-| `500` | Internal Server Error |
+#### 📤 من العميل للسيرفر
 
----
+| الحدث | البيانات | الوصف |
+|-------|---------|-------|
+| `joinRoom` | `roomId: number` | الدخول لغرفة محادثة |
+| `sendMessage` | `{ roomId, message }` | إرسال رسالة |
+| `leaveRoom` | `roomId: number` | الخروج من الغرفة |
 
-## 📊 Order Flow
+#### 📥 من السيرفر للعميل
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Customer  │────▶│   pending   │────▶│    paid     │
-│ Places Order│     │   (order)   │     │  (payment   │
-└─────────────┘     └─────────────┘     │  confirmed) │
-                                        └──────┬──────┘
-                                               │
-                    ┌─────────────┐     ┌──────▼──────┐
-                    │  completed  │◀────│   cooking   │
-                    │             │     │             │
-                    └─────────────┘     └──────┬──────┘
-                           ▲                   │
-                           │            ┌──────▼──────┐
-                           └────────────│  delivering │
-                                        │             │
-                                        └─────────────┘
-```
+| الحدث | البيانات | الوصف |
+|-------|---------|-------|
+| `joinedRoom` | `{ roomId, message }` | تأكيد الدخول للغرفة |
+| `previousMessages` | `Message[]` | الرسائل السابقة عند الدخول |
+| `newMessage` | `Message` | رسالة جديدة في الغرفة |
+| `error` | `{ message }` | خطأ في أي عملية |
 
 ---
 
-## 🗺️ Geospatial Features
+### شكل الرسالة
 
-This API uses **MySQL Spatial Functions** for location-based features:
-
-### How It Works
-
-1. **Restaurant registers** with a polygon defining their delivery zone
-2. **Customer searches** by sending their coordinates
-3. **System checks** if customer location is within any restaurant's delivery polygon using `ST_Intersects()`
-4. **Distance calculation** for delivery fee using `ST_Distance_Sphere()`
-
-### Example Polygon
-```json
-{
-  "delivery_area": [
-    [31.2357, 30.0444],  // lng, lat
-    [31.2400, 30.0500],
-    [31.2300, 30.0550],
-    [31.2357, 30.0444]   // Must close the polygon
-  ]
+```typescript
+interface Message {
+  id: number;
+  room_id: number;
+  sender_id: number;
+  sender_name: string;
+  sender_role: "customer" | "restaurant";
+  message: string;
+  created_at: string;
 }
 ```
 
 ---
 
-## 🤝 Contributing
+### مثال الاستخدام
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+```typescript
+// 1. اتصل بالسيرفر
+const socket = io(process.env.NEXT_PUBLIC_API_URL!, {
+  auth: { token: localStorage.getItem("customerToken") },
+});
+
+// 2. ادخل غرفة المحادثة
+socket.emit("joinRoom", roomId);
+
+// 3. استقبل الرسائل السابقة
+socket.on("previousMessages", (messages: Message[]) => {
+  setMessages(messages);
+});
+
+// 4. استقبل الرسائل الجديدة في الوقت الفعلي
+socket.on("newMessage", (msg: Message) => {
+  setMessages((prev) => [...prev, msg]);
+});
+
+// 5. أرسل رسالة
+socket.emit("sendMessage", { roomId, message: "هل طلبي جاهز؟" });
+
+// 6. اخرج من الغرفة عند مغادرة الصفحة
+return () => {
+  socket.emit("leaveRoom", roomId);
+  socket.disconnect();
+};
+```
 
 ---
 
-## 📝 License
+### سيناريو المحادثة الكامل
 
-This project is licensed under the ISC License.
+```
+العميل يفتح شاشة المحادثة
+        │
+        ▼
+GET /customer/chat-room/order/:orderId  ← جلب بيانات الغرفة
+        │
+        ▼
+socket.emit('joinRoom', roomId)  ← الدخول للغرفة
+        │
+        ▼
+socket.on('previousMessages')  ← استقبال التاريخ
+        │
+        ▼
+socket.on('newMessage')  ← الاستماع للرسائل الجديدة
+        │
+        ▼
+socket.emit('sendMessage', {...})  ← إرسال رسالة
+        │
+        ▼
+io.to(room).emit('newMessage')  ← البث لكل المتصلين في الغرفة
+```
 
 ---
 
-## 👨‍💻 Author
+## 🎨 التصميم
 
-**Youssef** - *Full Stack Developer*
+### 🎨 الألوان الرئيسية
+
+| اللون | الكود | الاستخدام |
+|-------|-------|-----------|
+| 🟠 **Primary** | `#E5A04D` | اللون الأساسي |
+| ⚫ **Dark** | `#1A1A1A` | النصوص الرئيسية |
+| ⚪ **Gray** | `#6B7280` | النصوص الثانوية |
+| 🟢 **Success** | `#10B981` | حالات النجاح |
+| 🔴 **Error** | `#EF4444` | حالات الخطأ |
+
+### 📱 Responsive Design
+
+التطبيق متجاوب مع جميع أحجام الشاشات:
+
+- 📱 **Mobile**: 320px - 768px
+- 📱 **Tablet**: 768px - 1024px
+- 💻 **Desktop**: 1024px+
 
 ---
 
-## 🙏 Acknowledgments
+## 🧪 الأوامر المتاحة
 
-- Express.js community
-- MySQL spatial documentation
-- Cloudinary for image hosting
+```bash
+# 🔧 التطوير
+npm run dev          # تشغيل وضع التطوير
+
+# 🏗️ البناء
+npm run build        # بناء المشروع للإنتاج
+
+# 🚀 التشغيل
+npm run start        # تشغيل وضع الإنتاج
+
+# 🔍 الفحص
+npm run lint         # فحص الأكواد
+```
+
+---
+
+## 📝 ملاحظات مهمة
+
+### 💳 نظام الدفع
+
+- **طلبات التوصيل الفوري:** الدفع عند الاستلام (كاش)
+- **طلبات الحجز المسبق:** يتطلب رفع صورة إثبات الدفع (فودافون كاش أو إنستاباي) قبل تأكيد الطلب
+
+### 🗺️ نظام تحديد الموقع
+
+- يستخدم GPS لتحديد موقع العميل تلقائياً
+- يحسب المسافة بين العميل والمطعم باستخدام **Haversine Formula**
+- رسوم التوصيل = المسافة (كم) × رسوم الكيلومتر المحددة من المطعم
+
+### 🛒 السلة الذكية
+
+- تدعم إضافة أطباق من مطاعم متعددة في نفس الوقت
+- عند الطلب، يجب اختيار مطعم واحد فقط لكل طلب
+- يمكن العودة لإتمام باقي المطاعم بعد إتمام الطلب الأول
+
+### 💬 نظام المحادثة
+
+المحادثة متاحة **فقط** في الحالة التالية:
+- الطلب من نوع **حجز** (وليس توصيل فوري)
+- تم **تأكيد الدفع** من قبل الأدمن
+
+في أي حالة أخرى (دفع معلق أو مرفوض أو طلب توصيل) لا تظهر خاصية المحادثة.
+
+| الحالة | متاحة؟ |
+|--------|--------|
+| طلب حجز + دفع مؤكد | ✅ |
+| طلب حجز + دفع معلق | ❌ |
+| طلب حجز + دفع مرفوض | ❌ |
+| طلب توصيل فوري | ❌ |
+
+---
+
+## 🤝 المساهمة
+
+نرحب بمساهماتكم! يرجى اتباع الخطوات التالية:
+
+1. **Fork** المشروع
+2. أنشئ **Branch** جديد (`git checkout -b feature/amazing-feature`)
+3. **Commit** التغييرات (`git commit -m 'Add amazing feature'`)
+4. **Push** إلى الـ Branch (`git push origin feature/amazing-feature`)
+5. افتح **Pull Request**
+
+---
+
+## 📄 الرخصة
+
+هذا المشروع مرخص تحت رخصة **MIT** - راجع ملف [LICENSE](LICENSE) للتفاصيل.
 
 ---
 
 <div align="center">
 
-**⭐ Star this repo if you find it helpful!**
+### 💖 شكراً لاستخدامك التطبيق!
 
-Made with ❤️ and ☕
+**صنع بـ ❤️ في مصر 🇪🇬**
+
+[![GitHub stars](https://img.shields.io/github/stars/Youssefsea/Food_front?style=social)](https://github.com/Youssefsea/Food_front/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Youssefsea/Food_front?style=social)](https://github.com/Youssefsea/Food_front/network/members)
 
 </div>
