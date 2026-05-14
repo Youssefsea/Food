@@ -1,9 +1,10 @@
 const data = require("../data/data");
 const bcryptJs = require("bcryptjs");
 const crypto = require("crypto");
-const { Resend } = require("resend"); 
+const { Resend } = require("resend");
+const {redisClient}=require("../middelware/redisClient"); 
 const { createToken } = require("../middelware/jwtmake");
-const jwt = require("jsonwebtoken");
+
  
 const resend = new Resend(process.env.RESEND_API_KEY);
  
@@ -83,80 +84,88 @@ const sendEmail = async (email, otp) => {
 const sendOTPEmail = async (req, res) => {
   try {
     const { email, phone } = req.body;
- 
+
     if (!email || !phone) {
       return res.status(400).json({ error: "Email and phone are required" });
     }
- 
+
+    const lockExists = await redisClient.get(`otp_lock:${email}`);
+    if (lockExists) {
+      return res.status(429).json({ error: "OTP already sent. Please wait." });
+    }
+
     const { rows: existing } = await data.query(
       "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
- 
     if (existing.length > 0) {
       return res.status(409).json({ error: "Email or phone already exists" });
     }
- 
+
     const otp = crypto.randomInt(100000, 999999).toString();
- 
+    const hashedOtp = await bcryptJs.hash(otp, 10);
+
+    await redisClient.set(`otp:${email}`, hashedOtp, { ex: 60 });
+
+    await redisClient.set(`otp_lock:${email}`, "1", { ex: 60 });
+
     await sendEmail(email, otp);
-    console.log(`OTP ${otp} sent to email: ${email}`);
- 
-    const otpToken = jwt.sign(
-      { email, otp },
-      process.env.JWT_SECRET,
-      { expiresIn: "1m" }
-    );
- 
-    return res.status(200).json({
-      message: "OTP sent to your email successfully",
-      otpToken, 
-    });
+
+    return res.status(200).json({ message: "OTP sent to your email successfully" });
   } catch (err) {
     console.error("Send OTP Error:", err);
     return res.status(500).json({ error: "Failed to send OTP" });
   }
 };
- 
+
 const signupForCustomer = async (req, res) => {
   try {
-    const { name, email, password, role, phone, otp, otpToken } = req.body;
- 
-    if (!name || !email || !password || !phone || !otp || !otpToken) {
+    const { name, email, password, role, phone, otp } = req.body;
+
+    if (!name || !email || !password || !phone || !otp) {
       return res.status(400).json({ error: "Missing required fields" });
     }
- 
-    if (role === "restaurant" || (role !== "customer" && role !== "admin")) {
+
+    const ALLOWED_ROLES = ["customer", "admin"];
+    if (!ALLOWED_ROLES.includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
     }
- 
-    let decoded;
-    try {
-      decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
-    } catch {
-      return res.status(400).json({ error: "OTP expired or invalid token" });
+
+    const storedHash = await redisClient.get(`otp:${email}`);
+    if (!storedHash) {
+      return res.status(400).json({ error: "OTP expired or not found" });
     }
- 
-    if (decoded.email !== email || decoded.otp !== otp) {
+
+    const isValid = await bcryptJs.compare(otp, storedHash);
+    if (!isValid) {
       return res.status(400).json({ error: "Invalid OTP" });
     }
- 
+
+    await redisClient.del(`otp:${email}`);
+    await redisClient.del(`otp_lock:${email}`);
+
     const { rows: userExists } = await data.query(
       "SELECT id FROM users WHERE email = $1 OR phone = $2",
       [email, phone]
     );
- 
     if (userExists.length > 0) {
       return res.status(409).json({ error: "Email or phone already exists" });
     }
- 
+
     const hashPassword = await bcryptJs.hash(password, 11);
- 
-    await data.query(
-      "INSERT INTO users (name, email, password, role, phone) VALUES ($1, $2, $3, $4, $5)",
-      [name, email, hashPassword, role, phone]
-    );
- 
+
+    try {
+      await data.query(
+        "INSERT INTO users (name, email, password, role, phone) VALUES ($1, $2, $3, $4, $5)",
+        [name, email, hashPassword, role, phone]
+      );
+    } catch (err) {
+      if (err.code === "23505") {
+        return res.status(409).json({ error: "Email or phone already exists" });
+      }
+      throw err;
+    }
+
     return res.status(201).json({
       message: "User registered successfully",
       user: { name, email, phone, role },

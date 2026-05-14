@@ -35,6 +35,9 @@ router.post('/customer/payment-status', middelware.sureToken, middelware.verifyR
 
 router.post('/restaurant/signup', authForRestaurants.AddInfoRestaurant);
 router.post('/restaurant/login', authForRestaurants.loginForRestaurant);
+router.post('/restaurant/send-otp', authForRestaurants.sendOTPEmail);
+
+
 router.post('/restaurant/add-dish', middelware.sureToken,middelware.verifyRoleForRestaurant, upload.array('images', 5), dishes.addDishesForRestaurant);
 router.get('/restaurant/profile', middelware.sureToken,middelware.verifyRoleForRestaurant, authForRestaurants.restaurantProfile);
 router.put('/restaurant/change-info', middelware.sureToken,middelware.verifyRoleForRestaurant, authForRestaurants.changeResturantinfo);
