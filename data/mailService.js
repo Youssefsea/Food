@@ -1,45 +1,28 @@
-const nodemailer = require('nodemailer');
-
-const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';
-
-let transporter = null;
+const {brevo}=require('@getbrevo/brevo');
 
 const getTransporter = () => {
-  if (!EMAIL_ENABLED) return null;
-
-  if (transporter) return transporter;
-
-  const host = process.env.EMAIL_HOST;
-  const port = Number(process.env.EMAIL_PORT || 587);
-  const secure = process.env.EMAIL_SECURE === 'true';
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-
-  if (!host || !user || !pass) {
-    console.warn('Email disabled: missing EMAIL_HOST / EMAIL_USER / EMAIL_PASS');
+  if (!process.env.BREVO_API_KEY) {
+    console.warn('BREVO_API_KEY is not set. Email sending will be skipped.');
     return null;
   }
-
-  transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
-
-  return transporter;
+  const client = brevo.ApiClient.instance;
+  client.authentications["api-key"].
+apiKey = process.env.BREVO_API_KEY;
+  return new brevo.TransactionalEmailsApi();
 };
 
 const sendMail = async ({ to, subject, text, html }) => {
   const t = getTransporter();
-  if (!t) return { skipped: true };
+  if (!t) {
+    console.warn('Email sending skipped due to missing BREVO_API_KEY.');
+    return { skipped: true, message: 'Email sending skipped' };
+  }
 
-  const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
-  if (!to) return { skipped: true };
+  const from = 'noreply@yourdomain.com';
 
-  const info = await t.sendMail({
-    from,
-    to,
+  const info = await t.sendTransacEmail({
+    sender: { name: "أكلي", email: from },
+    to: [{ email: to }],
     subject,
     text,
     html,
