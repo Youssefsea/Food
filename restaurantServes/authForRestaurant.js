@@ -2,15 +2,19 @@ const data = require("../data/data");
 const bcryptJs = require("bcryptjs");
 const { createToken } = require("../middelware/jwtmake");
 const crypto = require("crypto");
-const { Resend } = require("resend"); // ✅ بدل nodemailer
+ 
 const {redisClient}=require('../middelware/redisClient')
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendRestaurantEmail = async (email, otp) => {
-  const { error } = await resend.emails.send({
-    from: "onboarding@resend.dev",
-    to: email,
+ const client = Brevo.ApiClient.instance;
+  client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
+
+  const apiInstance = new Brevo.TransactionalEmailsApi();
+
+  await apiInstance.sendTransacEmail({
+    sender: { name: "أكلي", email: "noreply@yourdomain.com" },
+    to: [{ email }],
     subject: "🍽️ كود تفعيل حساب مطعمك على أكلي",
     html: `
 <!DOCTYPE html>
