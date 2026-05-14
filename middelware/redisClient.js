@@ -5,4 +5,4 @@ const redisClient = new Redis({
   token: process.env.REDIS_TOKEN,
 });
 
-module.exports = redisClient;
+module.exports = {redisClient};
