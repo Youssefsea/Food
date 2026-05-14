@@ -20,7 +20,7 @@ const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
     sender: { name: "أكلي", email: "noreply@yourdomain.com" },
     to: [{ email }],
     subject: "🍕 كود التحقق من أكلي",
-    html: `
+    htmlContent: `
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
