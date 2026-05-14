@@ -1,7 +1,7 @@
 const data = require("../data/data");
 const bcryptJs = require("bcryptjs");
 const crypto = require("crypto");
-const Brevo = require("@getbrevo/brevo");
+const SibApiV3Sdk = require("sib-api-v3-sdk");
 const {redisClient}=require("../middelware/redisClient"); 
 const { createToken } = require("../middelware/jwtmake");
 
@@ -9,10 +9,12 @@ const { createToken } = require("../middelware/jwtmake");
 
  
 const sendEmail = async (email, otp) => {
-  const client = Brevo.ApiClient.instance;
-  client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
+const client = SibApiV3Sdk.ApiClient.instance;
 
-  const apiInstance = new Brevo.TransactionalEmailsApi();
+client.authentications["api-key"].apiKey =
+  process.env.BREVO_API_KEY;
+
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
   await apiInstance.sendTransacEmail({
     sender: { name: "أكلي", email: "noreply@yourdomain.com" },
