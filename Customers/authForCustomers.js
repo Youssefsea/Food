@@ -4,90 +4,130 @@ const crypto = require("crypto");
 const SibApiV3Sdk = require("sib-api-v3-sdk");
 const {redisClient}=require("../middelware/redisClient"); 
 const { createToken } = require("../middelware/jwtmake");
-
- 
-
+const brevo = require('@getbrevo/brevo');
  
 const sendEmail = async (email, otp) => {
-const client = SibApiV3Sdk.ApiClient.instance;
+  const response = await fetch(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      method: "POST",
 
-client.authentications["api-key"].apiKey =
-  process.env.BREVO_API_KEY;
+      headers: {
+        accept: "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "content-type": "application/json",
+      },
 
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+      body: JSON.stringify({
+        sender: {
+          email: "yassefsea274@gmail.com",
+          name: "أكلي",
+        },
 
-  await apiInstance.sendTransacEmail({
-    sender: { name: "أكلي", email: "noreply@yourdomain.com" },
-    to: [{ email }],
-    subject: "🍕 كود التحقق من أكلي",
-    htmlContent: `
+        to: [{ email }],
+
+        subject: "🍕 كود التحقق من أكلي",
+
+        htmlContent: `
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:2rem 0;">
-    <tr><td align="center">
-      <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;">
 
-        <tr>
-          <td style="background:#E8502A;padding:2rem;text-align:center;">
-            <div style="font-size:32px;margin-bottom:6px;">🍕</div>
-            <div style="color:#fff;font-size:22px;font-weight:bold;">أكلي</div>
-            <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:4px;">اطلب أكلك المفضل</div>
-          </td>
-        </tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:2rem 0;">
+<tr>
+<td align="center">
 
-        <tr>
-          <td style="padding:2rem;text-align:center;">
-            <p style="font-size:16px;color:#111;margin:0 0 8px;">مرحباً 👋</p>
-            <p style="font-size:14px;color:#666;margin:0 0 1.5rem;line-height:1.7;">
-              استخدم الكود التالي لتأكيد حسابك.<br>الكود صالح لمدة <strong>دقيقة واحدة</strong> فقط.
-            </p>
+<table width="520" cellpadding="0" cellspacing="0"
+style="background:#fff;border-radius:16px;overflow:hidden;">
 
-            <div style="background:#FDF1EE;border-radius:12px;padding:1.25rem;display:inline-block;margin-bottom:1.5rem;">
-              <div style="font-size:13px;color:#993C1D;margin-bottom:6px;font-weight:bold;">كود التحقق</div>
-              <div style="font-size:36px;font-weight:bold;color:#E8502A;letter-spacing:10px;">${otp}</div>
-            </div>
+<tr>
+<td style="background:#E8502A;padding:2rem;text-align:center;">
+<div style="font-size:32px;margin-bottom:6px;">🍕</div>
 
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:1.5rem;">
-              <tr>
-                <td align="center" style="padding:0 8px;">
-                  <div style="width:40px;height:40px;border-radius:50%;background:#FDF1EE;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:20px;">⏱️</div>
-                  <div style="font-size:12px;color:#888;">صالح دقيقة</div>
-                </td>
-                <td align="center" style="padding:0 8px;">
-                  <div style="width:40px;height:40px;border-radius:50%;background:#FDF1EE;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:20px;">🔒</div>
-                  <div style="font-size:12px;color:#888;">كود سري</div>
-                </td>
-                <td align="center" style="padding:0 8px;">
-                  <div style="width:40px;height:40px;border-radius:50%;background:#FDF1EE;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:20px;">🛵</div>
-                  <div style="font-size:12px;color:#888;">توصيل سريع</div>
-                </td>
-              </tr>
-            </table>
+<div style="color:#fff;font-size:22px;font-weight:bold;">
+أكلي
+</div>
 
-            <p style="font-size:12px;color:#999;line-height:1.7;margin:0;">
-              إذا لم تطلب هذا الكود، يمكنك تجاهل هذا الإيميل بأمان.
-            </p>
-          </td>
-        </tr>
+<div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:4px;">
+اطلب أكلك المفضل
+</div>
+</td>
+</tr>
 
-        <tr>
-          <td style="border-top:1px solid #eee;padding:1rem 2rem;text-align:center;">
-            <span style="font-size:12px;color:#999;">📍 أكلي — أفضل مطاعم حواليك لحد الباب</span>
-          </td>
-        </tr>
+<tr>
+<td style="padding:2rem;text-align:center;">
 
-      </table>
-    </td></tr>
-  </table>
+<p style="font-size:16px;color:#111;margin:0 0 8px;">
+مرحباً 👋
+</p>
+
+<p style="font-size:14px;color:#666;margin:0 0 1.5rem;line-height:1.7;">
+استخدم الكود التالي لتأكيد حسابك.<br>
+الكود صالح لمدة <strong>دقيقة واحدة</strong> فقط.
+</p>
+
+<div style="background:#FDF1EE;border-radius:12px;
+padding:1.25rem;display:inline-block;margin-bottom:1.5rem;">
+
+<div style="font-size:13px;color:#993C1D;
+margin-bottom:6px;font-weight:bold;">
+كود التحقق
+</div>
+
+<div style="font-size:36px;font-weight:bold;
+color:#E8502A;letter-spacing:10px;">
+${otp}
+</div>
+
+</div>
+
+<p style="font-size:12px;color:#999;line-height:1.7;margin:0;">
+إذا لم تطلب هذا الكود، يمكنك تجاهل هذا الإيميل بأمان.
+</p>
+
+</td>
+</tr>
+
+<tr>
+<td style="border-top:1px solid #eee;
+padding:1rem 2rem;text-align:center;">
+
+<span style="font-size:12px;color:#999;">
+📍 أكلي — أفضل مطاعم حواليك لحد الباب
+</span>
+
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
 </body>
-</html>`,
-  });
+</html>
+`,
+      }),
+    }
+  );
 
-  if (error) throw new Error(error.message);
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.log(data);
+    throw new Error(data.message || "Failed to send email");
+  }
+
+  return data;
 };
- 
+
+
 const sendOTPEmail = async (req, res) => {
   try {
     const { email, phone } = req.body;
