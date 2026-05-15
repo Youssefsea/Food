@@ -7,16 +7,28 @@ const {redisClient}=require('../middelware/redisClient')
 
 
 const sendRestaurantEmail = async (email, otp) => {
- const client = Brevo.ApiClient.instance;
-  client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
+  const response = await fetch(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      method: "POST",
 
-  const apiInstance = new Brevo.TransactionalEmailsApi();
+      headers: {
+        accept: "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "content-type": "application/json",
+      },
 
-  await apiInstance.sendTransacEmail({
-    sender: { name: "أكلي", email: "noreply@yourdomain.com" },
-    to: [{ email }],
-    subject: "🍽️ كود تفعيل حساب مطعمك على أكلي",
-    html: `
+      body: JSON.stringify({
+        sender: {
+          email: "yourverifiedemail@gmail.com",
+          name: "أكلي",
+        },
+
+        to: [{ email }],
+
+        subject: "🍕 كود التحقق من أكلي",
+
+        htmlContent:`
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -96,9 +108,18 @@ const sendRestaurantEmail = async (email, otp) => {
   </table>
 </body>
 </html>`,
-  });
+      }),
+    }
+  );
 
-  if (error) throw new Error(error.message);
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.log(data);
+    throw new Error(data.message || "Failed to send email");
+  }
+
+  return data;
 };
 
 const sendOTPEmail = async (req, res) => {
