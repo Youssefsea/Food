@@ -692,10 +692,10 @@ const makeOrder = async (req, res) => {
         const delivery_fees = resRows[0].delivery_fees;
 
         const { rows: distanceRows } = await client.query(
-          `SELECT ST_Distance_Sphere(
-             ST_SetSRID(ST_MakePoint($1, $2), 4326),
-             ST_SetSRID(ST_MakePoint($3, $4), 4326)
-           ) AS distance`,
+        `SELECT ST_DistanceSphere(
+   ST_SetSRID(ST_MakePoint($1, $2), 4326),
+   ST_SetSRID(ST_MakePoint($3, $4), 4326)
+ ) AS distance`,
           [lng, lat, lngOfRes, latOfRes]
         );
 
