@@ -190,7 +190,8 @@ const { rows: restaurants } = await data.query(`
   rp.location,
   rp.delivery_fees,
   rda.can_deliver,
-  rda.can_reserve
+  rda.can_reserve,
+  rda.delivery_area
 FROM restaurant_profiles rp
 INNER JOIN restaurant_delivery_areas rda
   ON rp.id = rda.restaurant_id
