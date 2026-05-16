@@ -84,61 +84,59 @@ const lookForNearRestaurants = async (req, res) => {
   try {
     const { lat, lng } = req.body;
 
-   if(lat == null || lng == null){
+    if (lat == null || lng == null) {
       return res.status(400).json({ error: "lat & lng required" });
     }
 
-const userPoint = `POINT(${lng} ${lat})`;
+    const userPoint = `POINT(${lng} ${lat})`;
 
-const { rows } = await data.query(
-  `SELECT id AS area_id, restaurant_id
-   FROM restaurant_delivery_areas
-   WHERE ST_Intersects(
-     delivery_area,
-     ST_GeomFromText($1, 4326)
-   )`,
-  [userPoint]
-);
+    const { rows } = await data.query(
+      `SELECT DISTINCT ON (restaurant_id) id AS area_id, restaurant_id
+       FROM restaurant_delivery_areas
+       WHERE ST_Intersects(
+         delivery_area,
+         ST_GeomFromText($1, 4326)
+       )`,
+      [userPoint]
+    );
 
     if (rows.length === 0) {
-      return res.status(400).json({ message: "No nearby restaurants found" });
+      return res.status(200).json({ count: 0, nearby_restaurants: [] });
+      // ↑ رجعنا 200 مش 400 عشان ده مش error، مفيش مطاعم بس
     }
 
-    const restaurantIds = rows.map(r => r.restaurant_id);
-if (!restaurantIds.length) {
-  return res.status(400).json({ error: "No nearby restaurants found" });
-}
+    const restaurantIds = rows.map((r) => r.restaurant_id);
+    const placeholders = restaurantIds.map((_, i) => `$${i + 1}`).join(",");
 
-    const restaurantPlaceholders = restaurantIds.map((_, i) => `$${i + 1}`).join(',');
     const { rows: restaurants } = await data.query(
       `SELECT id, description, location
        FROM restaurant_profiles
-       WHERE id IN (${restaurantPlaceholders})`,
+       WHERE id IN (${placeholders})`,
       restaurantIds
     );
 
-    const result = rows.map(area => {
-      const info = restaurants.find(r => r.id === area.restaurant_id);
+    // Map بدون تكرار
+    const restaurantMap = new Map(restaurants.map((r) => [r.id, r]));
+
+    const result = rows.map((area) => {
+      const info = restaurantMap.get(area.restaurant_id);
       return {
-           id: area.restaurant_id,
-        area_id: area.area_id,
         restaurant_id: area.restaurant_id,
-        description: info?.description,
-        location: info?.location
+        area_id: area.area_id,
+        description: info?.description ?? null,
+        location: info?.location ?? null,
       };
     });
 
     return res.status(200).json({
       count: result.length,
-      nearby_restaurants: result
+      nearby_restaurants: result,
     });
-
   } catch (err) {
     console.error("Error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 const lookForResByName=async(req,res)=>
 {
   try
