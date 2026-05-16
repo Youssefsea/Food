@@ -3,34 +3,22 @@ const data = require('../data/data');
 const { pusher } = require('./chatSocket');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Helper: جيب restaurant_profiles.id من users.id
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const getRestaurantProfileId = async (userId) => {
-  const { rows } = await data.query(
-    'SELECT id FROM restaurant_profiles WHERE user_id = $1',
-    [userId]
-  );
-  return rows.length > 0 ? rows[0].id : null;
-};
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Helper: التحقق من صلاحية الوصول للغرفة
-// ✅ بيعمل lookup للـ restaurant profile لو محتاج
+// restaurant_id في chat_rooms = users.id مباشرة
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const checkRoomAccess = async (room, userId, userRole) => {
+const checkRoomAccess = (room, userId, userRole) => {
   if (userRole === 'customer') {
     return Number(room.customer_id) === Number(userId);
   }
   if (userRole === 'restaurant') {
-    // ✅ بنجيب restaurant_profiles.id ونقارن بيه
-    const profileId = await getRestaurantProfileId(userId);
-    return profileId !== null && Number(room.restaurant_id) === Number(profileId);
+    return Number(room.restaurant_id) === Number(userId);
   }
   return false;
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /chat/rooms
+// جلب غرف الشات للكاستومر
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const getChatRoomsForCustomer = async (req, res) => {
   try {
@@ -43,8 +31,7 @@ const getChatRoomsForCustomer = async (req, res) => {
               (SELECT message    FROM chat_messages WHERE room_id = cr.id ORDER BY created_at DESC LIMIT 1) AS last_message,
               (SELECT created_at FROM chat_messages WHERE room_id = cr.id ORDER BY created_at DESC LIMIT 1) AS last_message_time
        FROM chat_rooms cr
-       INNER JOIN restaurant_profiles rp ON cr.restaurant_id = rp.id
-       INNER JOIN users u ON rp.user_id = u.id
+       INNER JOIN users u ON cr.restaurant_id = u.id
        INNER JOIN orders o ON cr.order_id = o.id
        WHERE cr.customer_id = $1
        ORDER BY cr.created_at DESC`,
@@ -60,17 +47,11 @@ const getChatRoomsForCustomer = async (req, res) => {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /chat/rooms/restaurant
-// ✅ بنجيب restaurant_profiles.id الأول
+// جلب غرف الشات للمطعم
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const getChatRoomsForRestaurant = async (req, res) => {
   try {
     const restaurantUserId = req.user.id;
-
-    // ✅ التعديل الأساسي — بنجيب profile id مش user id
-    const profileId = await getRestaurantProfileId(restaurantUserId);
-    if (!profileId) {
-      return res.status(404).json({ error: 'Restaurant profile not found' });
-    }
 
     const { rows: rooms } = await data.query(
       `SELECT cr.id, cr.order_id, cr.created_at,
@@ -83,7 +64,7 @@ const getChatRoomsForRestaurant = async (req, res) => {
        INNER JOIN orders o ON cr.order_id = o.id
        WHERE cr.restaurant_id = $1
        ORDER BY cr.created_at DESC`,
-      [profileId] // ✅ profileId مش restaurantUserId
+      [restaurantUserId] // ✅ restaurant_id = users.id مباشرة
     );
 
     return res.status(200).json({ rooms });
@@ -112,9 +93,8 @@ const getChatMessages = async (req, res) => {
     }
 
     const room = roomRows[0];
-    const hasAccess = await checkRoomAccess(room, userId, userRole); // ✅ await
 
-    if (!hasAccess) {
+    if (!checkRoomAccess(room, userId, userRole)) {
       return res.status(403).json({ error: 'Access denied to this chat room' });
     }
 
@@ -129,9 +109,9 @@ const getChatMessages = async (req, res) => {
 
     return res.status(200).json({
       room: {
-        id: room.id,
-        order_id: room.order_id,
-        customer_id: room.customer_id,
+        id:            room.id,
+        order_id:      room.order_id,
+        customer_id:   room.customer_id,
         restaurant_id: room.restaurant_id,
       },
       messages,
@@ -161,9 +141,8 @@ const getChatRoomByOrderId = async (req, res) => {
     }
 
     const room = roomRows[0];
-    const hasAccess = await checkRoomAccess(room, userId, userRole); // ✅ await
 
-    if (!hasAccess) {
+    if (!checkRoomAccess(room, userId, userRole)) {
       return res.status(403).json({ error: 'Access denied to this chat room' });
     }
 
@@ -199,9 +178,8 @@ const sendMessage = async (req, res) => {
     }
 
     const room = roomRows[0];
-    const hasAccess = await checkRoomAccess(room, senderId, senderRole); // ✅ await + unified helper
 
-    if (!hasAccess) {
+    if (!checkRoomAccess(room, senderId, senderRole)) {
       return res.status(403).json({ error: 'Access denied to send message in this room' });
     }
 
@@ -255,9 +233,8 @@ const pusherAuth = async (req, res) => {
     }
 
     const room = roomRows[0];
-    const hasAccess = await checkRoomAccess(room, userId, userRole); // ✅ await
 
-    if (!hasAccess) {
+    if (!checkRoomAccess(room, userId, userRole)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
