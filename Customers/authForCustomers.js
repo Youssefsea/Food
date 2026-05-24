@@ -12,7 +12,7 @@ import { Resend } from "resend";
 const sendEmail = async (email, otp) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: "أكلي <onboarding@resend.dev>", // غيرها لما تجيب domain
+    from: 'noreply@food-front-rho.me'
       to: email,
       subject: "🍕 كود التحقق من أكلي",
       html: `
