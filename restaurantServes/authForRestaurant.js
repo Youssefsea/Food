@@ -2,33 +2,17 @@ const data = require("../data/data");
 const bcryptJs = require("bcryptjs");
 const { createToken } = require("../middelware/jwtmake");
 const crypto = require("crypto");
- 
+ import { Resend } from "resend";
 const {redisClient}=require('../middelware/redisClient')
-
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendRestaurantEmail = async (email, otp) => {
-  const response = await fetch(
-    "https://api.brevo.com/v3/smtp/email",
-    {
-      method: "POST",
-
-      headers: {
-        accept: "application/json",
-        "api-key": process.env.BREVO_API_KEY,
-        "content-type": "application/json",
-      },
-
-      body: JSON.stringify({
-        sender: {
-          email: "yourverifiedemail@gmail.com",
-          name: "أكلي",
-        },
-
-        to: [{ email }],
-
-        subject: "🍕 كود التحقق من أكلي",
-
-        htmlContent:`
+  try {
+    const { data, error } = await resend.emails.send({
+      from: "أكلي <onboarding@resend.dev>", // غيرها لما تعمل domain
+      to: email,
+      subject: "🍽️ كود تفعيل حساب مطعمك على أكلي",
+      html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -39,11 +23,11 @@ const sendRestaurantEmail = async (email, otp) => {
 
         <tr>
           <td style="background:#E8502A;padding:1.5rem 2rem;">
-            <table width="100%" cellpadding="0" cellspacing="0">
+            <table width="100%">
               <tr>
-                <td style="vertical-align:middle;">
+                <td>
                   <div style="width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-left:12px;">🍽️</div>
-                  <div style="display:inline-block;vertical-align:middle;">
+                  <div style="display:inline-block;">
                     <div style="color:#fff;font-size:18px;font-weight:bold;">انضم لعائلة أكلي</div>
                     <div style="color:rgba(255,255,255,0.75);font-size:12px;">بوابة المطاعم الشريكة</div>
                   </div>
@@ -68,29 +52,6 @@ const sendRestaurantEmail = async (email, otp) => {
               <div style="font-size:11px;color:#993C1D;margin-top:6px;">⏱️ صالح لمدة دقيقة واحدة فقط</div>
             </div>
 
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:1.5rem;">
-              <tr>
-                <td align="center" style="padding:0 6px;">
-                  <div style="background:#f5f5f5;border-radius:10px;padding:12px 8px;text-align:center;">
-                    <div style="font-size:22px;">🏪</div>
-                    <div style="font-size:11px;color:#888;margin-top:4px;">سجّل مطعمك</div>
-                  </div>
-                </td>
-                <td align="center" style="padding:0 6px;">
-                  <div style="background:#f5f5f5;border-radius:10px;padding:12px 8px;text-align:center;">
-                    <div style="font-size:22px;">🛵</div>
-                    <div style="font-size:11px;color:#888;margin-top:4px;">حدد مناطق التوصيل</div>
-                  </div>
-                </td>
-                <td align="center" style="padding:0 6px;">
-                  <div style="background:#f5f5f5;border-radius:10px;padding:12px 8px;text-align:center;">
-                    <div style="font-size:22px;">🧾</div>
-                    <div style="font-size:11px;color:#888;margin-top:4px;">ابدأ استلام الطلبات</div>
-                  </div>
-                </td>
-              </tr>
-            </table>
-
             <p style="font-size:11px;color:#999;line-height:1.7;margin:0;">
               إذا لم تقم بهذا الطلب، يمكنك تجاهل هذا الإيميل بأمان.
             </p>
@@ -107,19 +68,20 @@ const sendRestaurantEmail = async (email, otp) => {
     </td></tr>
   </table>
 </body>
-</html>`,
-      }),
+</html>
+`,
+    });
+
+    if (error) {
+      console.error(error);
+      throw new Error("Failed to send restaurant email");
     }
-  );
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    console.log(data);
-    throw new Error(data.message || "Failed to send email");
+    return data;
+  } catch (err) {
+    console.error("Restaurant Email Error:", err.message);
+    throw err;
   }
-
-  return data;
 };
 
 const sendOTPEmail = async (req, res) => {
