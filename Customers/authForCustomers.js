@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const Brevo = require("@getbrevo/brevo");
 const {redisClient}=require("../middelware/redisClient"); 
 const { createToken } = require("../middelware/jwtmake");
-import { Resend } from "resend";
+const { Resend } = require("resend");
  
 
  const resend = new Resend(process.env.RESEND_API_KEY);
