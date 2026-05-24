@@ -13,7 +13,7 @@ const chat=require('./chat/chatRoutes');
 
 router.post('/LogforAdmin', auth.loginForAdmin);
 
-router.post('/send-otp', auth.sendOTPEmail);
+router.post('/customer/send-otp', auth.sendOTPEmail);
 
 router.post('/signup', auth.signupForCustomer);
 router.post('/customer/signup', auth.signupForCustomer);
