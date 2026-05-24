@@ -9,9 +9,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const sendRestaurantEmail = async (email, otp) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: "أكلي <onboarding@resend.dev>", // غيرها لما تعمل domain
+      from: 'noreply@httpsfood-front-rho.me',
       to: email,
-      subject: "🍽️ كود تفعيل حساب مطعمك على أكلي",
+      subject: 'Your Login Code',
       html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
