@@ -14,7 +14,7 @@ const sendEmail = async (email, otp) => {
     const { data, error } = await resend.emails.send({
     from: 'noreply@httpsfood-front-rho.me',
       to: email,
-      subject: "🍕 كود التحقق من أكلي",
+      subject: 'Your Login Code',
       html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
