@@ -10,7 +10,7 @@ const sendMail = async ({ to, subject, text, html }) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "أكلي <onboarding@resend.dev>", // غيرها لما تعمل domain
+      from: 'noreply@httpsfood-front-rho.me',
       to,
       subject,
       text,
