@@ -104,25 +104,27 @@ const getAllDishesForRestaurantVendor=async(req,res)=>
 
 };
 
-const getAllDishesForRestaurantExplore=async(req,res)=>
-{
-    try{
+const getAllDishesForRestaurantExplore = async (req, res) => {
+  try {
+    const { rows: dishesRows } = await data.query(
+      `SELECT restaurant_id, name, description, price, preparation_time, category, image
+       FROM dishes
+       WHERE is_available = true
+       ORDER BY restaurant_id`
+    );
 
-        
+    const dishesByRestaurant = dishesRows.reduce((acc, dish) => {
+      const { restaurant_id, ...dishData } = dish;
+      if (!acc[restaurant_id]) acc[restaurant_id] = [];
+      acc[restaurant_id].push(dishData);
+      return acc;
+    }, {});
 
-    const { rows: dishesRows }=await data.query("SELECT name, description, price, preparation_time, category, image FROM dishes WHERE is_available = true" );
-  
-    
-     return res.status(200).json({dishes:dishesRows});
-     
-    }
-    catch(err)
-    {
-        console.error("Error:",err);
-        return res.status(500).json({error:"Internal server error"});   
-    }
-
-
+    return res.status(200).json({ dishes: dishesByRestaurant });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 const changeResturantDish=async(req,res)=>
