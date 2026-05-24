@@ -67,7 +67,7 @@ router.get('/restaurant/dishes', dishes.getAllResDishes);
 
 router.get('/restaurant/all', orders.lookforAllRestaurants);
 router.post('/restaurant/all-dishes-for-restaurantV',middelware.sureToken,middelware.verifyRoleForRestaurant, dishes.getAllDishesForRestaurantVendor);
-router.get('/restaurant/all-dishes-for-restaurantE', dishes.getAllDishesForRestaurantExplore);
+router.post('/restaurant/all-dishes-for-restaurantE', dishes.getAllDishesForRestaurantExplore);
 
 router.get('/restaurant/search-by-name', orders.lookForResByName);
 
