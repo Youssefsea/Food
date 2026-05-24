@@ -111,7 +111,7 @@ const { restaurantId } = req.body||'';
 if(restaurantId)
 {
 const { rows: dishesRows } = await data.query(
-  `SELECT restaurant_id, name, description, price, preparation_time, category, image
+  `SELECT id,restaurant_id, name, description, price, preparation_time, category, image
    FROM dishes
    WHERE restaurant_id = $1 AND is_available = true`, [restaurantId]
 );
