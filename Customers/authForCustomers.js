@@ -12,7 +12,7 @@ const { Resend } = require("resend");
 const sendEmail = async (email, otp) => {
   try {
     const { data, error } = await resend.emails.send({
-    from: 'noreply@food-front-rho.me'
+    from: 'noreply@food-front-rho.me',
       to: email,
       subject: "🍕 كود التحقق من أكلي",
       html: `
