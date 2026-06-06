@@ -509,10 +509,10 @@ const getRestaurantOrders = async (req, res) => {
         let query = `
             SELECT o.id, o.total_amount, o.delivery_fee, o.status, 
                    o.is_reservation, o.reservation_date, o.location,
-                   o.created_at,o.lat, o.lng,p.status as payment_status,
+                   o.created_at, o.lat, o.lng, p.status as payment_status,
                    u.name as customer_name, u.phone as customer_phone, u.email as customer_email
             FROM orders o
-            JOIN payments p ON o.id = p.order_id
+            LEFT JOIN payments p ON o.id = p.order_id
             JOIN users u ON o.user_id = u.id
             WHERE o.restaurant_id = $1
         `;
