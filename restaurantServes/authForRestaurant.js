@@ -510,10 +510,16 @@ const getRestaurantOrders = async (req, res) => {
             SELECT o.id, o.total_amount, o.delivery_fee, o.status, 
                    o.is_reservation, o.reservation_date, o.location,
                    o.created_at, o.lat, o.lng, p.status as payment_status,
-                   u.name as customer_name, u.phone as customer_phone, u.email as customer_email
+                   u.name as customer_name, u.phone as customer_phone, u.email as customer_email,
+                   CASE 
+                       WHEN o.is_reservation = true AND p.status = 'confirmed'
+                       THEN cr.id 
+                       ELSE NULL 
+                   END as chat_room_id
             FROM orders o
             LEFT JOIN payments p ON o.id = p.order_id
             JOIN users u ON o.user_id = u.id
+            LEFT JOIN chat_rooms cr ON cr.order_id = o.id
             WHERE o.restaurant_id = $1
         `;
 
@@ -549,7 +555,6 @@ const getRestaurantOrders = async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 };
-
 const updateOrderStatus = async (req, res) => {
     try {
         const restaurantId = req.user.restaurantProfileId;
