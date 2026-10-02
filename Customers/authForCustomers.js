@@ -2,7 +2,7 @@ const data = require("../data/data");
 const bcryptJs = require("bcryptjs");
 const crypto = require("crypto");
 const { Resend } = require("resend");
-const createToken =require("../middelware/jwtmake")
+const {createToken} =require("../middelware/jwtmake")
 // ======================================================
 // Resend
 // ======================================================
